@@ -6,43 +6,15 @@ struct ContentView: View {
 
     var body: some View {
         TabView {
-            // カメラタブ（あとで本物のCameraViewに差し替える）
-            NavigationStack {
-                VStack(spacing: 16) {
-                    Text("📷 カメラ画面（これから実装）")
-                        .font(.title3)
-
-                    Text("保存されている写真：\(appState.photos.count)枚")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+            CameraView()
+                .tabItem {
+                    Label("カメラ", systemImage: "camera")
                 }
-                .padding()
-                .navigationTitle("retom カメラ")
-            }
-            .tabItem {
-                Label("カメラ", systemImage: "camera")
-            }
 
-            // アルバムタブ（あとでAlbumViewに差し替える）
-            NavigationStack {
-                VStack(spacing: 16) {
-                    Text("🖼 アルバム画面（これから実装）")
-                        .font(.title3)
-
-                    if appState.photos.isEmpty {
-                        Text("まだ写真はありません")
-                            .foregroundColor(.secondary)
-                    } else {
-                        Text("写真が \(appState.photos.count) 枚あります")
-                            .foregroundColor(.secondary)
-                    }
+            AlbumView()
+                .tabItem {
+                    Label("アルバム", systemImage: "photo.on.rectangle")
                 }
-                .padding()
-                .navigationTitle("retom アルバム")
-            }
-            .tabItem {
-                Label("アルバム", systemImage: "photo.on.rectangle")
-            }
         }
     }
 }

@@ -35,13 +35,13 @@ final class AppState: ObservableObject, Codable {
         try container.encode(isPremium, forKey: .isPremium)
     }
 
-
-    // MARK: - 保存処理
+    // MARK: - 保存場所
     private var saveURL: URL {
         let doc = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         return doc.appendingPathComponent("appState.json")
     }
 
+    // MARK: - 永続化
     func save() {
         do {
             let data = try JSONEncoder().encode(self)
@@ -62,6 +62,29 @@ final class AppState: ObservableObject, Codable {
         } catch {
             print("❌ AppState load failed: \(error)")
         }
+    }
+
+    // MARK: - テスト用：ダミー写真を1枚追加
+    func addDummyPhoto() {
+        let id = UUID()
+        let now = Date()
+
+        // まだ本物の画像は使わないので、適当な一時ファイルパスを入れておく
+        let dummyURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("dummy-\(id.uuidString).jpg")
+
+        let newPhoto = PhotoItem(
+            id: id,
+            capturedAt: now,
+            readyAt: now,
+            isUnlockedEarly: true,
+            requiresAdGateBeforeReady: false,
+            imageDataURL: dummyURL,
+            memoDrawingData: nil
+        )
+
+        photos.append(newPhoto)
+        save()
     }
 }
 

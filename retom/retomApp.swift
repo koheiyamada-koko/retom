@@ -8,7 +8,7 @@ struct retomApp: App {
 
     init() {
         // 起動時に保存済みデータを読み込む
-        AppState.shared.load()
+        appState.load()
     }
 
     var body: some Scene {

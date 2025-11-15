@@ -6,13 +6,13 @@ struct ContentView: View {
 
     var body: some View {
         TabView {
-            // カメラタブ（あとで本物のカメラ画面に差し替える）
+            // カメラタブ（あとで本物のCameraViewに差し替える）
             NavigationStack {
                 VStack(spacing: 16) {
-                    Text("📷 カメラ画面（これから作ります）")
+                    Text("📷 カメラ画面（これから実装）")
                         .font(.title3)
 
-                    Text("いま保存されている写真：\(appState.photos.count)枚")
+                    Text("保存されている写真：\(appState.photos.count)枚")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -23,10 +23,10 @@ struct ContentView: View {
                 Label("カメラ", systemImage: "camera")
             }
 
-            // アルバムタブ（これから実装）
+            // アルバムタブ（あとでAlbumViewに差し替える）
             NavigationStack {
                 VStack(spacing: 16) {
-                    Text("🖼 アルバム画面（これから作ります）")
+                    Text("🖼 アルバム画面（これから実装）")
                         .font(.title3)
 
                     if appState.photos.isEmpty {
@@ -46,3 +46,9 @@ struct ContentView: View {
         }
     }
 }
+
+#Preview {
+    ContentView()
+        .environmentObject(AppState.shared)
+}
+

@@ -3,7 +3,11 @@ import SwiftUI
 
 struct CameraView: View {
     @EnvironmentObject var appState: AppState
-    @State private var isCapturing = false
+
+    /// カメラ画面を出すかどうか
+    @State private var isCameraPresented = false
+    /// 撮影直後の「保存中…」表示用
+    @State private var isSaving = false
 
     var body: some View {
         NavigationStack {
@@ -12,51 +16,55 @@ struct CameraView: View {
                     .font(.title2)
                     .bold()
 
-                Text("現在の写真枚数：\(appState.photos.count)枚")
+                Text("保存されている写真：\(appState.photos.count)枚")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
 
-                // 疑似シャッターボタン
+                // ===== シャッターボタン =====
                 Button {
-                    captureDummyPhoto()
+                    isCameraPresented = true
                 } label: {
                     ZStack {
                         Circle()
                             .fill(.gray.opacity(0.2))
-                            .frame(width: 90, height: 90)
+                            .frame(width: 110, height: 110)
 
                         Circle()
-                            .fill(isCapturing ? .red : .white)
-                            .frame(width: 70, height: 70)
-                            .shadow(radius: 4)
+                            .fill(isSaving ? .red.opacity(0.8) : .white)
+                            .frame(width: 82, height: 82)
+                            .shadow(radius: 6)
 
-                        if isCapturing {
-                            Text("Saving…")
-                                .font(.caption)
-                                .foregroundColor(.red)
-                                .offset(y: 60)
-                        }
+                        Image(systemName: "camera.fill")
+                            .font(.title2)
+                            .foregroundColor(.black.opacity(0.7))
                     }
                 }
                 .buttonStyle(.plain)
-                .animation(.easeInOut(duration: 0.15), value: isCapturing)
+                .accessibilityLabel("シャッターボタン")
+
+                if isSaving {
+                    Text("保存中…")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                }
 
                 Spacer()
             }
             .padding()
             .navigationTitle("カメラ")
         }
-    }
-
-    private func captureDummyPhoto() {
-        guard !isCapturing else { return }
-
-        isCapturing = true
-        appState.addDummyPhoto()
-
-        // ちょっとだけアニメーションを見せるための遅延
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            isCapturing = false
+        // フルスクリーンでカメラを表示
+        .fullScreenCover(isPresented: $isCameraPresented) {
+            CameraPicker { image in
+                // 撮影 or フォトライブラリから取得した画像がここにくる
+                isSaving = true
+                appState.addPhoto(from: image)
+                // ちょっとだけ「保存中」を見せる
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    isSaving = false
+                }
+            }
+            .ignoresSafeArea()
         }
     }
 }
@@ -65,4 +73,3 @@ struct CameraView: View {
     CameraView()
         .environmentObject(AppState.shared)
 }
-

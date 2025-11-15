@@ -1,6 +1,5 @@
 // File: Shared/Models/AppState.swift
 import SwiftUI
-import Combine
 
 @MainActor
 final class AppState: ObservableObject, Codable {
@@ -35,28 +34,30 @@ final class AppState: ObservableObject, Codable {
         try container.encode(isPremium, forKey: .isPremium)
     }
 
-    // MARK: - 保存場所
-    private var saveURL: URL {
-        let doc = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        return doc.appendingPathComponent("appState.json")
+    // MARK: - パス系
+    private var documentsDirectory: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
     }
 
-    // MARK: - 永続化
+    private var stateURL: URL {
+        documentsDirectory.appendingPathComponent("appState.json")
+    }
+
+    // MARK: - 永続化（状態）
     func save() {
         do {
             let data = try JSONEncoder().encode(self)
-            try data.write(to: saveURL, options: .atomic)
+            try data.write(to: stateURL, options: .atomic)
         } catch {
             print("❌ AppState save failed: \(error)")
         }
     }
 
     func load() {
-        guard FileManager.default.fileExists(atPath: saveURL.path) else { return }
+        guard FileManager.default.fileExists(atPath: stateURL.path) else { return }
         do {
-            let data = try Data(contentsOf: saveURL)
+            let data = try Data(contentsOf: stateURL)
             let decoded = try JSONDecoder().decode(AppState.self, from: data)
-
             self.photos = decoded.photos
             self.isPremium = decoded.isPremium
         } catch {
@@ -64,26 +65,53 @@ final class AppState: ObservableObject, Codable {
         }
     }
 
-    // MARK: - テスト用：ダミー写真を1枚追加
-    func addDummyPhoto() {
+    // MARK: - 写真の追加（本物の画像版）
+    func addPhoto(from image: UIImage) {
         let id = UUID()
-        let now = Date()
 
-        // まだ本物の画像は使わないので、適当な一時ファイルパスを入れておく
-        let dummyURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("dummy-\(id.uuidString).jpg")
+        guard let data = image.jpegData(compressionQuality: 0.9) else {
+            print("❌ jpegData 変換に失敗")
+            return
+        }
 
-        let newPhoto = PhotoItem(
+        let fileName = "photo-\(id.uuidString).jpg"
+        let fileURL = documentsDirectory.appendingPathComponent(fileName)
+
+        do {
+            try data.write(to: fileURL, options: .atomic)
+        } catch {
+            print("❌ 画像の保存に失敗: \(error)")
+            return
+        }
+
+        let item = PhotoItem(
             id: id,
-            capturedAt: now,
-            readyAt: now,
+            capturedAt: Date(),
+            imageDataURL: fileURL,
             isUnlockedEarly: true,
             requiresAdGateBeforeReady: false,
-            imageDataURL: dummyURL,
             memoDrawingData: nil
         )
 
-        photos.append(newPhoto)
+        photos.append(item)
+        save()
+    }
+
+    // MARK: -（おまけ）テスト用ダミー写真
+    func addDummyPhoto() {
+        let id = UUID()
+        let fileURL = documentsDirectory.appendingPathComponent("dummy-\(id.uuidString).jpg")
+
+        let item = PhotoItem(
+            id: id,
+            capturedAt: Date(),
+            imageDataURL: fileURL,
+            isUnlockedEarly: true,
+            requiresAdGateBeforeReady: false,
+            memoDrawingData: nil
+        )
+
+        photos.append(item)
         save()
     }
 }

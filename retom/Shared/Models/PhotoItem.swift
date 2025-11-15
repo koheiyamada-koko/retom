@@ -1,3 +1,4 @@
+
 // File: Shared/Models/PhotoItem.swift
 import Foundation
 
@@ -33,4 +34,3 @@ struct PhotoItem: Identifiable, Codable, Equatable {
         return String(format: "%02d:%02d", minutes, seconds)
     }
 }
-

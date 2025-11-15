@@ -1,3 +1,4 @@
+
 // File: Shared/Models/AppState.swift
 import SwiftUI
 import Combine
@@ -64,4 +65,3 @@ final class AppState: ObservableObject, Codable {
         }
     }
 }
-

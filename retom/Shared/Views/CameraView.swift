@@ -3,73 +3,74 @@ import SwiftUI
 
 struct CameraView: View {
     @EnvironmentObject var appState: AppState
-
-    /// カメラ画面を出すかどうか
-    @State private var isCameraPresented = false
-    /// 撮影直後の「保存中…」表示用
-    @State private var isSaving = false
+    @State private var showPicker = false
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 32) {
-                Text("📷 retom カメラ")
-                    .font(.title2)
-                    .bold()
+        VStack(spacing: 24) {
+
+            // MARK: - タイトル
+            VStack(spacing: 6) {
+                Text("カメラ")
+                    .font(.system(size: 32, weight: .bold))
+
+                HStack(spacing: 8) {
+                    Image(systemName: "camera.fill")
+                    Text("retom カメラ")
+                        .font(.system(size: 20, weight: .semibold))
+                }
 
                 Text("保存されている写真：\(appState.photos.count)枚")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-
-                // ===== シャッターボタン =====
-                Button {
-                    isCameraPresented = true
-                } label: {
-                    ZStack {
-                        Circle()
-                            .fill(.gray.opacity(0.2))
-                            .frame(width: 110, height: 110)
-
-                        Circle()
-                            .fill(isSaving ? .red.opacity(0.8) : .white)
-                            .frame(width: 82, height: 82)
-                            .shadow(radius: 6)
-
-                        Image(systemName: "camera.fill")
-                            .font(.title2)
-                            .foregroundColor(.black.opacity(0.7))
-                    }
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("シャッターボタン")
-
-                if isSaving {
-                    Text("保存中…")
-                        .font(.caption)
-                        .foregroundColor(.red)
-                }
-
-                Spacer()
+                    .font(.system(size: 14))
+                    .foregroundColor(.gray)
             }
-            .padding()
-            .navigationTitle("カメラ")
+            .padding(.top, 32)
+
+            Spacer()
+
+            // MARK: - プレビュー領域（仮）
+            Rectangle()
+                .fill(Color.black.opacity(0.85))
+                .frame(
+                    width: UIScreen.main.bounds.width * 0.85,
+                    height: UIScreen.main.bounds.height * 0.35
+                )
+                .cornerRadius(16)
+                .shadow(radius: 8)
+                .overlay(
+                    Text("Camera Preview")
+                        .foregroundColor(.white.opacity(0.5))
+                        .font(.system(size: 18))
+                )
+
+            Spacer()
+
+            // MARK: - シャッターボタン
+            Button {
+                showPicker = true
+            } label: {
+                ZStack {
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: 72, height: 72)
+                        .shadow(radius: 6)
+
+                    Circle()
+                        .stroke(Color.black.opacity(0.15), lineWidth: 6)
+                        .frame(width: 88, height: 88)
+                }
+            }
+            .padding(.bottom, 36)
         }
-        // フルスクリーンでカメラを表示
-        .fullScreenCover(isPresented: $isCameraPresented) {
-            CameraPicker { image in
-                // 撮影 or フォトライブラリから取得した画像がここにくる
-                isSaving = true
-                appState.addPhoto(from: image)
-                // ちょっとだけ「保存中」を見せる
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    isSaving = false
+        .sheet(isPresented: $showPicker) {
+            // ⭐️ ここが今回のキモ。from: .camera を明示して init と一致させる
+            CameraPicker(
+                from: .camera,
+                onImagePicked: { uiImage in
+                    guard let image = uiImage else { return }
+                    appState.addPhoto(from: image)
                 }
-            }
-            .ignoresSafeArea()
+            )
         }
     }
 }
 
-#Preview {
-    CameraView()
-        .environmentObject(AppState.shared)
-}

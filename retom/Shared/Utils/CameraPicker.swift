@@ -2,11 +2,54 @@
 import SwiftUI
 import UIKit
 
-/// UIKit のカメラ／フォトライブラリ画面を SwiftUI から使うためのラッパー
+/// UIKit の UIImagePickerController をラップして、
+/// SwiftUI から「画像が1枚返ってくるコンポーネント」として使う
 struct CameraPicker: UIViewControllerRepresentable {
 
-    /// 画像が撮影・取得できたときに呼ばれるコールバック
-    let onImagePicked: (UIImage) -> Void
+    /// どこから画像を取るか（カメラ or ライブラリ）
+    enum Source {
+        case camera
+        case library
+    }
+
+    /// 呼び出し元から指定してもらうソース
+    let from: Source
+
+    /// 選ばれた画像を返すコールバック
+    let onImagePicked: (UIImage?) -> Void
+
+    // MARK: - UIViewControllerRepresentable
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.delegate = context.coordinator
+
+        // 指定された Source に応じて UIKit の sourceType を決める
+        let sourceType: UIImagePickerController.SourceType
+        switch from {
+        case .camera:
+            // シミュレーターなどでカメラが使えないときは自動でライブラリにフォールバック
+            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                sourceType = .camera
+            } else {
+                sourceType = .photoLibrary
+            }
+        case .library:
+            sourceType = .photoLibrary
+        }
+
+        picker.sourceType = sourceType
+        picker.allowsEditing = false
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {
+        // 今回は特に更新することなし
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
 
     // MARK: - Coordinator
 
@@ -21,46 +64,15 @@ struct CameraPicker: UIViewControllerRepresentable {
             _ picker: UIImagePickerController,
             didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]
         ) {
-            if let image = info[.originalImage] as? UIImage {
-                parent.onImagePicked(image)
-            }
+            let image = info[.originalImage] as? UIImage
+            parent.onImagePicked(image)
             picker.dismiss(animated: true)
         }
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.onImagePicked(nil)
             picker.dismiss(animated: true)
         }
-    }
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(parent: self)
-    }
-
-    // MARK: - UIViewControllerRepresentable
-
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.delegate = context.coordinator
-
-        // ▶︎ シミュレータでは必ずフォトライブラリを使う
-        #if targetEnvironment(simulator)
-        picker.sourceType = .photoLibrary
-        #else
-        // ▶︎ 実機ではカメラがあればカメラ、なければフォトライブラリ
-        if UIImagePickerController.isSourceTypeAvailable(.camera) {
-            picker.sourceType = .camera
-            picker.cameraCaptureMode = .photo
-        } else {
-            picker.sourceType = .photoLibrary
-        }
-        #endif
-
-        picker.allowsEditing = false
-        return picker
-    }
-
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {
-        // 画面更新時に特にやることはなし
     }
 }
 

@@ -65,37 +65,55 @@ final class AppState: ObservableObject, Codable {
         }
     }
 
-    // MARK: - 写真の追加（本物の画像版）
-    func addPhoto(from image: UIImage) {
-        let id = UUID()
+    // File: Shared/Models/AppState.swift
 
-        guard let data = image.jpegData(compressionQuality: 0.9) else {
-            print("❌ jpegData 変換に失敗")
+    // File: Shared/Models/AppState.swift
+
+    func addPhoto(from uiImage: UIImage) {
+        // ✅ レトロ加工＋日付スタンプを付与
+        let processed = RetroFilter.apply(to: uiImage)
+
+        // JPEG データにエンコード
+        guard let data = processed.jpegData(compressionQuality: 0.9) else {
+            print("❌ jpegData に失敗")
             return
         }
 
-        let fileName = "photo-\(id.uuidString).jpg"
-        let fileURL = documentsDirectory.appendingPathComponent(fileName)
+        // 保存先（Documents フォルダ）を決定
+        guard let documentsDirectory = FileManager.default.urls(
+            for: .documentDirectory,
+            in: .userDomainMask
+        ).first else {
+            print("❌ Documents ディレクトリが見つかりません")
+            return
+        }
 
+        // ファイル名と URL
+        let id = UUID()
+        let fileName = "\(id.uuidString).jpg"
+        let url = documentsDirectory.appendingPathComponent(fileName)
+
+        // 実際に書き込む
         do {
-            try data.write(to: fileURL, options: .atomic)
+            try data.write(to: url, options: .atomic)
         } catch {
             print("❌ 画像の保存に失敗: \(error)")
             return
         }
 
+        // PhotoItem を作成（★ここが修正ポイント）
         let item = PhotoItem(
             id: id,
-            capturedAt: Date(),
-            imageDataURL: fileURL,
-            isUnlockedEarly: true,
-            requiresAdGateBeforeReady: false,
-            memoDrawingData: nil
+            capturedAt: Date(),      // ← createdAt ではなく capturedAt に変更
+            imageDataURL: url
         )
 
-        photos.append(item)
+        // 先頭に追加して保存
+        photos.insert(item, at: 0)
         save()
     }
+
+
 
     // MARK: -（おまけ）テスト用ダミー写真
     func addDummyPhoto() {

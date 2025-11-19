@@ -1,135 +1,89 @@
 // File: Shared/Models/AppState.swift
 import SwiftUI
+import UIKit
 
-@MainActor
-final class AppState: ObservableObject, Codable {
+/// アプリ全体で共有する状態
+final class AppState: ObservableObject {
+
+    // MARK: - Singleton
     static let shared = AppState()
+    private init() {}
 
-    // MARK: - Published State
+    // MARK: - Properties
+
+    /// 撮影された写真の一覧
     @Published var photos: [PhotoItem] = []
-    @Published var isPremium: Bool = false
 
-    // MARK: - Coding Keys
-    enum CodingKeys: String, CodingKey {
-        case photos
-        case isPremium
+    // MARK: - Load & Save
+
+    /// 起動時に保存済みデータを読み込む
+    func load() {
+        let url = saveFileURL
+        do {
+            let data = try Data(contentsOf: url)
+            let decoded = try JSONDecoder().decode([PhotoItem].self, from: data)
+            self.photos = decoded
+        } catch {
+            print("⚠️ AppState load failed: \(error)")
+        }
     }
 
-    // MARK: - Init
-    init(photos: [PhotoItem] = [], isPremium: Bool = false) {
-        self.photos = photos
-        self.isPremium = isPremium
+    /// 現在の `photos` を JSON として保存
+    func save() {
+        let url = saveFileURL
+        do {
+            let data = try JSONEncoder().encode(photos)
+            try data.write(to: url, options: .atomic)
+        } catch {
+            print("⚠️ AppState save failed: \(error)")
+        }
     }
 
-    // MARK: - Codable
-    required init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        photos = try container.decode([PhotoItem].self, forKey: .photos)
-        isPremium = try container.decode(Bool.self, forKey: .isPremium)
+    /// 保存用 JSON ファイルの URL
+    private var saveFileURL: URL {
+        documentsDirectory.appendingPathComponent("photos.json")
     }
 
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(photos, forKey: .photos)
-        try container.encode(isPremium, forKey: .isPremium)
-    }
-
-    // MARK: - パス系
+    /// 画像ファイルや JSON を置く Documents ディレクトリ
     private var documentsDirectory: URL {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
     }
 
-    private var stateURL: URL {
-        documentsDirectory.appendingPathComponent("appState.json")
-    }
+    // MARK: - Photo Handling
 
-    // MARK: - 永続化（状態）
-    func save() {
-        do {
-            let data = try JSONEncoder().encode(self)
-            try data.write(to: stateURL, options: .atomic)
-        } catch {
-            print("❌ AppState save failed: \(error)")
-        }
-    }
-
-    func load() {
-        guard FileManager.default.fileExists(atPath: stateURL.path) else { return }
-        do {
-            let data = try Data(contentsOf: stateURL)
-            let decoded = try JSONDecoder().decode(AppState.self, from: data)
-            self.photos = decoded.photos
-            self.isPremium = decoded.isPremium
-        } catch {
-            print("❌ AppState load failed: \(error)")
-        }
-    }
-
-    // File: Shared/Models/AppState.swift
-
-    // File: Shared/Models/AppState.swift
-
+    /// 撮影 or 選択した UIImage を受け取り、
+    /// レトロ加工 + 日付スタンプを付けて保存し、PhotoItem を追加
     func addPhoto(from uiImage: UIImage) {
-        // ✅ レトロ加工＋日付スタンプを付与
-        let processed = RetroFilter.apply(to: uiImage)
+        // ① レトロ加工 + 日付スタンプ
+        let processed = RetroFilter.apply(to: uiImage, date: Date())
 
-        // JPEG データにエンコード
+        // ② JPEG データ化
         guard let data = processed.jpegData(compressionQuality: 0.9) else {
-            print("❌ jpegData に失敗")
+            print("⚠️ JPEG 変換に失敗")
             return
         }
 
-        // 保存先（Documents フォルダ）を決定
-        guard let documentsDirectory = FileManager.default.urls(
-            for: .documentDirectory,
-            in: .userDomainMask
-        ).first else {
-            print("❌ Documents ディレクトリが見つかりません")
-            return
-        }
-
-        // ファイル名と URL
+        // ③ 保存先 URL を決定
         let id = UUID()
         let fileName = "\(id.uuidString).jpg"
-        let url = documentsDirectory.appendingPathComponent(fileName)
+        let fileURL = documentsDirectory.appendingPathComponent(fileName)
 
-        // 実際に書き込む
+        // ④ 実際に書き込む
         do {
-            try data.write(to: url, options: .atomic)
+            try data.write(to: fileURL, options: .atomic)
         } catch {
             print("❌ 画像の保存に失敗: \(error)")
             return
         }
 
-        // PhotoItem を作成（★ここが修正ポイント）
-        let item = PhotoItem(
-            id: id,
-            capturedAt: Date(),      // ← createdAt ではなく capturedAt に変更
-            imageDataURL: url
-        )
-
-        // 先頭に追加して保存
-        photos.insert(item, at: 0)
-        save()
-    }
-
-
-
-    // MARK: -（おまけ）テスト用ダミー写真
-    func addDummyPhoto() {
-        let id = UUID()
-        let fileURL = documentsDirectory.appendingPathComponent("dummy-\(id.uuidString).jpg")
-
+        // ⑤ PhotoItem を作成して先頭に追加
         let item = PhotoItem(
             id: id,
             capturedAt: Date(),
-            imageDataURL: fileURL,
-            isUnlockedEarly: true,
-            requiresAdGateBeforeReady: false,
-            memoDrawingData: nil
+            imageDataURL: fileURL
         )
 
-        photos.append(item)
+        photos.insert(item, at: 0)
         save()
     }
 }

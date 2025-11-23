@@ -1,184 +1,196 @@
 // File: Shared/Views/CameraView.swift
 import SwiftUI
+import AVFoundation
 
 struct CameraView: View {
     @EnvironmentObject var appState: AppState
+
+    // シミュレータと実機でプロパティを分岐
+    #if targetEnvironment(simulator)
     @State private var showPicker = false
+    #else
+    @StateObject private var cameraService = CameraService()
+    #endif
 
     var body: some View {
+        #if targetEnvironment(simulator)
+        // ============================
+        // 🖥 シミュレータ用（フォトライブラリ）
+        // ============================
         ZStack {
-            // 背景：少し黄味がかった紙っぽい色
-            Color(red: 0.98, green: 0.96, blue: 0.90)
+            Color(red: 0.98, green: 0.96, blue: 0.90) // ほんのりベージュ
                 .ignoresSafeArea()
 
             VStack(spacing: 24) {
 
-                // ヘッダー（タイトル・サブタイトル・枚数）
-                headerSection
+                // ヘッダー
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("カメラ")
+                        .font(.largeTitle.bold())
 
-                // カメラプレビュー風カード
-                previewSection
+                    HStack(spacing: 6) {
+                        Image(systemName: "camera")
+                        Text("retom フィルムカメラ")
+                            .font(.title3.bold())
+                    }
+
+                    Text("保存されている写真：\(appState.photos.count)枚")
+                        .font(.subheadline)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 4)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Capsule())
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 24)
+                .padding(.top, 32)
+
+                // 擬似プレビュー枠
+                RoundedRectangle(cornerRadius: 28)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.black.opacity(0.95),
+                                Color.black.opacity(0.8)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .overlay(
+                        Text("シミュレータでは\nフォトライブラリから選択")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.7))
+                            .multilineTextAlignment(.center)
+                    )
+                    .frame(height: 280)
+                    .padding(.horizontal, 32)
+                    .shadow(radius: 20)
 
                 Spacer()
 
                 // シャッターボタン
-                shutterSection
+                Button {
+                    showPicker = true
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(.white.opacity(0.9))
+                            .frame(width: 84, height: 84)
+                        Circle()
+                            .strokeBorder(.white.opacity(0.8), lineWidth: 4)
+                            .frame(width: 96, height: 96)
+                    }
+                    .shadow(radius: 8)
+                }
+
+                Text("シャッター（フォトライブラリ）")
+                    .font(.footnote)
+                    .foregroundColor(.gray)
+
+                Spacer().frame(height: 40)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 24)
         }
         .sheet(isPresented: $showPicker) {
-            // ✅ ここは動きはそのまま（写真をとったら保存）
-            CameraPicker(from: .camera) { uiImage in
+            // ここは今まで通りの CameraPicker を利用
+            CameraPicker(from: .library) { uiImage in
                 guard let image = uiImage else { return }
                 appState.addPhoto(from: image)
             }
         }
-    }
 
-    // MARK: - Header
-
-    private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("カメラ")
-                .font(.system(size: 32, weight: .heavy, design: .rounded))
-
-            HStack(spacing: 8) {
-                Image(systemName: "camera.fill")
-                    .foregroundColor(.black.opacity(0.8))
-
-                Text("retom フィルムカメラ")
-                    .font(.system(.headline, design: .rounded))
-            }
-
-            HStack {
-                // 枠付きのチップ風表示
-                Text("保存されている写真：\(appState.photos.count)枚")
-                    .font(.footnote)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.white.opacity(0.8))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.black.opacity(0.1), lineWidth: 1)
-                    )
-
-                Spacer()
-            }
-        }
-        .foregroundColor(.black.opacity(0.9))
-    }
-
-    // MARK: - Preview
-
-    private var previewSection: some View {
+        #else
+        // ============================
+        // 📱 実機用（フルスクリーンカメラ）
+        // ============================
         ZStack {
-            // 外枠：フィルムカメラのファインダー枠っぽいカード
-            RoundedRectangle(cornerRadius: 22)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.black.opacity(0.95),
-                            Color.black.opacity(0.85)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .shadow(color: .black.opacity(0.25), radius: 14, x: 0, y: 10)
+            // カメラプレビュー
+            CameraPreviewLayerView(session: cameraService.session)
+                .ignoresSafeArea()
 
-            // 内側に一段明るい枠
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(Color.white.opacity(0.15), lineWidth: 2)
-                .padding(10)
-
-            // 中央のテキスト
-            Text("Camera Preview")
-                .font(.system(.subheadline, design: .monospaced))
-                .foregroundColor(.white.opacity(0.6))
-
-            // 上下にフィルム穴っぽい飾り
+            // 上下にUIをオーバーレイ
             VStack {
-                filmHolesRow
-                Spacer()
-                filmHolesRow
-            }
-            .padding(.horizontal, 28)
-            .padding(.vertical, 18)
-        }
-        .frame(height: 280)
-    }
+                // ヘッダー
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("カメラ")
+                        .font(.largeTitle.bold())
 
-    private var filmHolesRow: some View {
-        HStack(spacing: 6) {
-            ForEach(0..<8, id: \.self) { _ in
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(Color.black.opacity(0.4))
-                    .frame(width: 10, height: 4)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 2)
-                            .stroke(Color.white.opacity(0.15), lineWidth: 0.5)
-                    )
-            }
-        }
-    }
+                    HStack(spacing: 6) {
+                        Image(systemName: "camera")
+                        Text("retom フィルムカメラ")
+                            .font(.title3.bold())
+                    }
 
-    // MARK: - Shutter
-
-    private var shutterSection: some View {
-        VStack(spacing: 16) {
-            Button {
-                showPicker = true
-            } label: {
-                ZStack {
-                    // 外側のリング
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    Color.white,
-                                    Color(red: 0.95, green: 0.94, blue: 0.92)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 96, height: 96)
-                        .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 6)
-
-                    Circle()
-                        .stroke(Color.black.opacity(0.08), lineWidth: 4)
-                        .frame(width: 88, height: 88)
-
-                    // 内側（少し凹んでいるっぽく）
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [
-                                    Color.white,
-                                    Color(red: 0.95, green: 0.95, blue: 0.95)
-                                ],
-                                center: .center,
-                                startRadius: 4,
-                                endRadius: 40
-                            )
-                        )
-                        .frame(width: 70, height: 70)
-                        .overlay(
-                            Circle()
-                                .stroke(Color.black.opacity(0.05), lineWidth: 1)
-                        )
+                    Text("保存されている写真：\(appState.photos.count)枚")
+                        .font(.subheadline)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 4)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Capsule())
                 }
-            }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
+                .foregroundColor(.white)
+                .shadow(radius: 10)
 
-            Text("シャッター")
-                .font(.footnote)
-                .foregroundColor(.gray)
+                Spacer()
+
+                // シャッターボタン
+                Button {
+                    cameraService.capturePhoto()
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(.white.opacity(0.9))
+                            .frame(width: 84, height: 84)
+                        Circle()
+                            .strokeBorder(.white.opacity(0.8), lineWidth: 4)
+                            .frame(width: 96, height: 96)
+                    }
+                    .shadow(radius: 8)
+                }
+                .padding(.bottom, 40)
+            }
         }
-        .padding(.bottom, 32)
+        .onAppear {
+            // 撮影完了時 → AppState に保存（レトロ＋日付付き）
+            cameraService.onPhotoCapture = { image in
+                appState.addPhoto(from: image)
+            }
+            cameraService.startSession()
+        }
+        .onDisappear {
+            cameraService.stopSession()
+        }
+        #endif
     }
 }
+
+// MARK: - 実機用プレビュービュー（AVCaptureVideoPreviewLayer）
+
+#if !targetEnvironment(simulator)
+private struct CameraPreviewLayerView: UIViewRepresentable {
+    let session: AVCaptureSession
+
+    func makeUIView(context: Context) -> PreviewView {
+        let view = PreviewView()
+        view.videoPreviewLayer.session = session
+        view.videoPreviewLayer.videoGravity = .resizeAspectFill
+        return view
+    }
+
+    func updateUIView(_ uiView: PreviewView, context: Context) {}
+}
+
+private final class PreviewView: UIView {
+    override class var layerClass: AnyClass {
+        AVCaptureVideoPreviewLayer.self
+    }
+
+    var videoPreviewLayer: AVCaptureVideoPreviewLayer {
+        layer as! AVCaptureVideoPreviewLayer
+    }
+}
+#endif
 

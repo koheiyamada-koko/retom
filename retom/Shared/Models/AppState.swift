@@ -5,18 +5,32 @@ import UIKit
 /// アプリ全体で共有する状態
 final class AppState: ObservableObject {
 
-    // MARK: - Singleton
-    static let shared = AppState()
-    private init() {}
-
-    // MARK: - Properties
-
-    /// 撮影された写真の一覧
+    // 公開プロパティ：アルバムに表示する写真たち
     @Published var photos: [PhotoItem] = []
 
-    // MARK: - Load & Save
+    // シングルトン（.environmentObject で渡しているやつ）
+    static let shared = AppState()
 
-    /// 起動時に保存済みデータを読み込む
+    private init() {
+        // 起動時に保存済みデータを読み込む
+        load()
+    }
+
+    // MARK: - 保存ファイルの場所
+
+    /// 写真リスト(JSON)を保存するファイルのURL
+    private var saveFileURL: URL {
+        let fm = FileManager.default
+        let dir = try! fm.url(for: .documentDirectory,
+                              in: .userDomainMask,
+                              appropriateFor: nil,
+                              create: true)
+        return dir.appendingPathComponent("app_state_photos.json")
+    }
+
+    // MARK: - ロード & セーブ
+
+    /// 保存してある PhotoItem の配列を読み込む
     func load() {
         let url = saveFileURL
         do {
@@ -24,11 +38,12 @@ final class AppState: ObservableObject {
             let decoded = try JSONDecoder().decode([PhotoItem].self, from: data)
             self.photos = decoded
         } catch {
+            // 初回起動など、ファイルが無いときはここに来るので警告だけ
             print("⚠️ AppState load failed: \(error)")
         }
     }
 
-    /// 現在の `photos` を JSON として保存
+    /// 現在の photos を JSON として保存
     func save() {
         let url = saveFileURL
         do {
@@ -39,52 +54,55 @@ final class AppState: ObservableObject {
         }
     }
 
-    /// 保存用 JSON ファイルの URL
-    private var saveFileURL: URL {
-        documentsDirectory.appendingPathComponent("photos.json")
-    }
+    // MARK: - 写真追加（レトロ加工 + 日付スタンプ付き）
 
-    /// 画像ファイルや JSON を置く Documents ディレクトリ
-    private var documentsDirectory: URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-    }
-
-    // MARK: - Photo Handling
-
-    /// 撮影 or 選択した UIImage を受け取り、
-    /// レトロ加工 + 日付スタンプを付けて保存し、PhotoItem を追加
     func addPhoto(from uiImage: UIImage) {
-        // ① レトロ加工 + 日付スタンプ
+        // 📌 1. RetroFilter でレトロ加工＋日付焼き込み
         let processed = RetroFilter.apply(to: uiImage, date: Date())
 
-        // ② JPEG データ化
+        // 📌 2. JPEGデータ生成
         guard let data = processed.jpegData(compressionQuality: 0.9) else {
-            print("⚠️ JPEG 変換に失敗")
+            print("❌ JPEG変換に失敗")
             return
         }
 
-        // ③ 保存先 URL を決定
+        // 📌 3. Documentsフォルダ取得
+        let directory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let id = UUID()
         let fileName = "\(id.uuidString).jpg"
-        let fileURL = documentsDirectory.appendingPathComponent(fileName)
+        let url = directory.appendingPathComponent(fileName)
 
-        // ④ 実際に書き込む
+        // 📌 4. データ書き込み
         do {
-            try data.write(to: fileURL, options: .atomic)
+            try data.write(to: url, options: .atomic)
         } catch {
             print("❌ 画像の保存に失敗: \(error)")
             return
         }
 
-        // ⑤ PhotoItem を作成して先頭に追加
+        // 📌 5. PhotoItem を作成して先頭に追加
         let item = PhotoItem(
             id: id,
             capturedAt: Date(),
-            imageDataURL: fileURL
+            imageDataURL: url
         )
 
         photos.insert(item, at: 0)
         save()
+    }
+
+
+    // MARK: - おまけ：ダミー写真追加（テスト用）
+
+    /// グレーのダミー画像を1枚追加したいとき用（テスト用）
+    func addDummyPhoto() {
+        let size = CGSize(width: 800, height: 600)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        let image = renderer.image { ctx in
+            UIColor.systemGray4.setFill()
+            ctx.fill(CGRect(origin: .zero, size: size))
+        }
+        addPhoto(from: image)
     }
 }
 

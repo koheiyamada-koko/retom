@@ -104,5 +104,29 @@ final class AppState: ObservableObject {
         }
         addPhoto(from: image)
     }
+    
+    //------------------------------------
+    // MARK: - 写真削除
+
+    func delete(_ photo: PhotoItem) {
+        let fileURL = photo.imageDataURL
+        let fm = FileManager.default
+
+        // 1. 画像ファイルを削除
+        do {
+            if fm.fileExists(atPath: fileURL.path) {
+                try fm.removeItem(at: fileURL)
+            }
+        } catch {
+            print("⚠️ 画像ファイル削除に失敗: \(error)")
+        }
+
+        // 2. メモリ上の配列から削除
+        photos.removeAll { $0.id == photo.id }
+
+        // 3. JSON も更新
+        save()
+    }
+
 }
 

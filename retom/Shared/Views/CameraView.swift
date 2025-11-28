@@ -1,17 +1,20 @@
 // File: Shared/Views/CameraView.swift
-// File: Shared/Views/CameraView.swift
 import SwiftUI
 
 struct CameraView: View {
     @EnvironmentObject var appState: AppState
     @State private var showPicker = false
 
-    // シミュレータではライブラリ、実機ではカメラ優先
+    // シャッターボタン演出用の状態
+    @State private var isShutterPressed = false
+    @State private var showFlashOverlay = false
+
+    // シミュレータではフォトライブラリ、実機ではカメラ優先
     private var pickerSource: CameraPicker.Source {
         #if targetEnvironment(simulator)
-        return .library
+        return .library          // シミュレータはライブラリ固定
         #else
-        return .camera
+        return .camera           // 実機ではカメラ優先
         #endif
     }
 
@@ -22,17 +25,20 @@ struct CameraView: View {
             Color(red: 0.99, green: 0.96, blue: 0.90)
                 .ignoresSafeArea()
 
+            // フラッシュ演出用オーバーレイ
+            if showFlashOverlay {
+                Color.white
+                    .opacity(0.8)
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+            }
+
             VStack(spacing: 32) {
-
-                // MARK: - Header（タイトルまわり）
                 headerSection
-
-                // MARK: - Preview エリア（黒いフィルム窓）
                 previewSection
 
                 Spacer()
 
-                // MARK: - シャッターボタン
                 shutterSection
 
                 Spacer()
@@ -42,25 +48,28 @@ struct CameraView: View {
             .padding(.top, 32)
         }
         .sheet(isPresented: $showPicker) {
-            CameraPicker(from: pickerSource) { image in
-                guard let image = image else { return }
-                appState.addPhoto(from: image)
+            CameraPicker(from: pickerSource) { uiImage in
+                if let uiImage = uiImage {
+                    appState.addPhoto(from: uiImage)
+                }
+                // ✅ シートを閉じたことを状態にも反映する
+                showPicker = false
             }
         }
+
     }
 
-    // MARK: - Header
+    // MARK: - Header（タイトル等）
 
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 6) {
             Text("カメラ")
                 .font(.largeTitle.bold())
 
-            HStack(spacing: 8) {
-                Image(systemName: "camera.fill")
-                    .font(.title3)
+            HStack(spacing: 6) {
+                Image(systemName: "camera")
                 Text("retom フィルムカメラ")
-                    .font(.title3.weight(.semibold))
+                    .font(.title3.bold())
             }
 
             Text("保存されている写真：\(appState.photos.count)枚")
@@ -70,13 +79,13 @@ struct CameraView: View {
                 .background(
                     Capsule()
                         .fill(Color.white.opacity(0.9))
-                        .shadow(radius: 2)
+                        .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
                 )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: - Preview
+    // MARK: - プレビュー枠（今はダミー）
 
     private var previewSection: some View {
         ZStack {
@@ -84,104 +93,111 @@ struct CameraView: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color.black.opacity(0.95),
-                            Color.black.opacity(0.85)
+                            Color.black.opacity(0.9),
+                            Color.black.opacity(0.95)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 )
-                .shadow(color: .black.opacity(0.25), radius: 20, x: 0, y: 16)
+                .shadow(color: .black.opacity(0.35), radius: 24, x: 0, y: 16)
 
-            VStack(spacing: 24) {
+            RoundedRectangle(cornerRadius: 28)
+                .stroke(Color.white.opacity(0.08), lineWidth: 2)
+                .padding(8)
 
-                // 上の小さな穴
-                HStack(spacing: 8) {
-                    ForEach(0..<7) { _ in
-                        Capsule()
-                            .fill(Color.black.opacity(0.6))
-                            .overlay(
-                                Capsule()
-                                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
-                            )
-                            .frame(width: 20, height: 4)
-                    }
-                }
-                .opacity(0.9)
-
+            // 上下の小さな穴っぽい装飾（フィルムの窓っぽく）
+            VStack {
+                capsuleRow
                 Spacer()
-
-                // 中央のメッセージ
-                Text(targetEnvironmentMessage)
-                    .font(.callout)
-                    .foregroundColor(.white.opacity(0.7))
-
-                Spacer()
-
-                // 下の小さな穴
-                HStack(spacing: 8) {
-                    ForEach(0..<7) { _ in
-                        Capsule()
-                            .fill(Color.black.opacity(0.6))
-                            .overlay(
-                                Capsule()
-                                    .stroke(Color.white.opacity(0.15), lineWidth: 1)
-                            )
-                            .frame(width: 20, height: 4)
-                    }
-                }
-                .opacity(0.9)
+                capsuleRow
             }
-            .padding(.vertical, 32)
-            .padding(.horizontal, 24)
+            .padding(.horizontal, 40)
+            .padding(.vertical, 26)
+
+            // 中央テキスト
+            Text("シミュレータでは\nフォトライブラリから選択")
+                .font(.callout)
+                .foregroundColor(.white.opacity(0.7))
+                .multilineTextAlignment(.center)
         }
-        .frame(height: 260)
+        .frame(height: 280)
     }
 
-    private var targetEnvironmentMessage: String {
-        #if targetEnvironment(simulator)
-        return "シミュレータでは\nフォトライブラリから選択"
-        #else
-        return "シャッターを押して撮影"
-        #endif
+    private var capsuleRow: some View {
+        HStack(spacing: 8) {
+            ForEach(0..<7, id: \.self) { _ in
+                Capsule()
+                    .fill(Color.white.opacity(0.18))
+                    .frame(width: 22, height: 4)
+            }
+        }
     }
 
-    // MARK: - Shutter
+    // MARK: - シャッターボタン
 
     private var shutterSection: some View {
         VStack(spacing: 12) {
             Button {
-                showPicker = true
+                // ① シャッター演出（縮む & フラッシュ）
+                triggerShutterAnimation()
+
+                // ② 少し待ってから Picker を開く
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    showPicker = true
+                }
+
             } label: {
                 ZStack {
+                    // 外側のリング
                     Circle()
                         .fill(Color.white.opacity(0.9))
                         .frame(width: 96, height: 96)
-                        .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 6)
+                        .shadow(color: .black.opacity(0.15), radius: 16, x: 0, y: 10)
 
+                    // 中央ボタン
                     Circle()
-                        .strokeBorder(Color.white.opacity(0.8), lineWidth: 6)
-                        .frame(width: 96, height: 96)
-
-                    Circle()
-                        .fill(Color.white.opacity(0.95))
-                        .frame(width: 74, height: 74)
+                        .fill(Color.white)
+                        .frame(width: 80, height: 80)
+                        .overlay(
+                            Circle()
+                                .stroke(Color.white.opacity(0.8), lineWidth: 3)
+                        )
+                        .scaleEffect(isShutterPressed ? 0.88 : 1.0)
+                        .animation(.easeOut(duration: 0.12), value: isShutterPressed)
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PlainButtonStyle())
 
-            Text(shutterLabelText)
-                .font(.subheadline)
+
+            Text("シャッター（フォトライブラリ）")
+                .font(.footnote)
                 .foregroundColor(.gray)
         }
         .frame(maxWidth: .infinity)
     }
 
-    private var shutterLabelText: String {
-        #if targetEnvironment(simulator)
-        return "シャッター（フォトライブラリ）"
-        #else
-        return "シャッター"
-        #endif
+    // MARK: - シャッター演出ロジック
+
+    private func triggerShutterAnimation() {
+        // ボタン縮小
+        isShutterPressed = true
+
+        // フラッシュ表示
+        withAnimation(.easeOut(duration: 0.08)) {
+            showFlashOverlay = true
+        }
+
+        // 少しだけ時間をおいて元に戻す
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+            isShutterPressed = false
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+            withAnimation(.easeOut(duration: 0.18)) {
+                showFlashOverlay = false
+            }
+        }
     }
 }
+

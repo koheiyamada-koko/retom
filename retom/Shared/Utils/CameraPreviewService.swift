@@ -1,57 +1,74 @@
 // File: Shared/Utils/CameraPreviewService.swift
-
 import Foundation
 import AVFoundation
-import UIKit
 
-final class CameraPreviewService: NSObject, ObservableObject {
+/// カメラのプレビュー専用サービス
+final class CameraPreviewService: ObservableObject {
 
-    // 実際のカメラ映像を映すための AVCaptureSession
     let session = AVCaptureSession()
 
-    // カメラの画質プリセット
-    private let preset: AVCaptureSession.Preset = .photo
+    private let sessionQueue = DispatchQueue(label: "retom.camera.session.queue")
+    private var isConfigured = false
 
-    override init() {
-        super.init()
+    // MARK: - Public
 
-        configureSession()
+    func start() {
+        sessionQueue.async {
+            // まだ設定してなければ一度だけ構成
+            if !self.isConfigured {
+                self.configureSession()
+            }
+
+            // 設定が成功していて、まだ走っていなければ start
+            if self.isConfigured, !self.session.isRunning {
+                self.session.startRunning()
+            }
+        }
     }
+
+    func stop() {
+        sessionQueue.async {
+            if self.session.isRunning {
+                self.session.stopRunning()
+            }
+        }
+    }
+
+    // MARK: - Private
 
     private func configureSession() {
         session.beginConfiguration()
-        session.sessionPreset = preset
+        defer {
+            session.commitConfiguration()
+        }
 
-        // 背面カメラを使う
-        guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera,
-                                                   for: .video,
-                                                   position: .back),
-              let input = try? AVCaptureDeviceInput(device: camera)
-        else {
-            print("❌ カメラデバイス取得失敗")
+        session.sessionPreset = .photo
+
+        // デバイス取得（背面広角カメラ）
+        guard let device = AVCaptureDevice.default(
+            .builtInWideAngleCamera,
+            for: .video,
+            position: .back
+        ) else {
+            print("⚠️ CameraPreviewService: カメラデバイスが見つかりません")
             return
         }
 
-        // Session に追加
-        if session.canAddInput(input) {
-            session.addInput(input)
+        do {
+            let input = try AVCaptureDeviceInput(device: device)
+            if session.canAddInput(input) {
+                session.addInput(input)
+            } else {
+                print("⚠️ CameraPreviewService: 入力をセッションに追加できません")
+                return
+            }
+        } catch {
+            print("❌ CameraPreviewService: Camera input error: \(error)")
+            return
         }
 
-        session.commitConfiguration()
-    }
-
-    /// カメラ開始
-    func start() {
-        if !session.isRunning {
-            session.startRunning()
-        }
-    }
-
-    /// カメラ停止
-    func stop() {
-        if session.isRunning {
-            session.stopRunning()
-        }
+        // ここまで来たら構成完了
+        isConfigured = true
     }
 }
 

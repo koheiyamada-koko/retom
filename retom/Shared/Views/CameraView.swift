@@ -5,6 +5,9 @@ struct CameraView: View {
     @EnvironmentObject var appState: AppState
     @State private var showPicker = false
 
+    // カメラプレビュー用サービス
+    @StateObject private var cameraService = CameraPreviewService()
+
     // シャッターボタン演出用の状態
     @State private var isShutterPressed = false
     @State private var showFlashOverlay = false
@@ -56,6 +59,18 @@ struct CameraView: View {
                 showPicker = false
             }
         }
+        // CameraView.swift 内
+
+                .onAppear {
+                    #if !targetEnvironment(simulator)
+                    cameraService.start()
+                    #endif
+                }
+                .onDisappear {
+                    #if !targetEnvironment(simulator)
+                    cameraService.stop()
+                    #endif
+                }
 
     }
 
@@ -85,28 +100,38 @@ struct CameraView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: - プレビュー枠（今はダミー）
+    // MARK: - プレビュー枠
 
     private var previewSection: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 32)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.black.opacity(0.9),
-                            Color.black.opacity(0.95)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(Color.black)
                 .shadow(color: .black.opacity(0.35), radius: 24, x: 0, y: 16)
 
             RoundedRectangle(cornerRadius: 28)
                 .stroke(Color.white.opacity(0.08), lineWidth: 2)
                 .padding(8)
 
-            // 上下の小さな穴っぽい装飾（フィルムの窓っぽく）
+            // 中身：実機ならカメラ映像、シミュレータならダミー表示
+            #if targetEnvironment(simulator)
+            // 🔹 シミュレータ用：今までどおりのダミープレビュー
+            VStack {
+                Text("シミュレータでは\nフォトライブラリから選択")
+                    .font(.callout)
+                    .foregroundColor(.white.opacity(0.7))
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.black.opacity(0.95))
+            .clipShape(RoundedRectangle(cornerRadius: 28))
+            #else
+            // 🔹 実機用：本物のカメラプレビュー
+            CameraPreviewView(service: cameraService)
+                .clipShape(RoundedRectangle(cornerRadius: 28))
+                .clipped()
+            #endif
+
+            // 上下の穴っぽい装飾
             VStack {
                 capsuleRow
                 Spacer()
@@ -114,12 +139,6 @@ struct CameraView: View {
             }
             .padding(.horizontal, 40)
             .padding(.vertical, 26)
-
-            // 中央テキスト
-            Text("シミュレータでは\nフォトライブラリから選択")
-                .font(.callout)
-                .foregroundColor(.white.opacity(0.7))
-                .multilineTextAlignment(.center)
         }
         .frame(height: 280)
     }
@@ -139,14 +158,13 @@ struct CameraView: View {
     private var shutterSection: some View {
         VStack(spacing: 12) {
             Button {
-                // ① シャッター演出（縮む & フラッシュ）
+                // ✅ 先にフラッシュ/縮みアニメーション
                 triggerShutterAnimation()
 
-                // ② 少し待ってから Picker を開く
+                // ✅ 少し待ってから Picker を開く
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                     showPicker = true
                 }
-
             } label: {
                 ZStack {
                     // 外側のリング
@@ -168,7 +186,6 @@ struct CameraView: View {
                 }
             }
             .buttonStyle(PlainButtonStyle())
-
 
             Text("シャッター（フォトライブラリ）")
                 .font(.footnote)

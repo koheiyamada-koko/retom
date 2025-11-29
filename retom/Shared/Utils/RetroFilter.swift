@@ -5,53 +5,51 @@ import CoreImage.CIFilterBuiltins
 
 struct RetroFilter {
 
+    // 共通 CI コンテキスト
     private static let ciContext = CIContext()
 
-    // 日付表示用フォーマッタ
-    // IMG_8537 っぽい「'24 11 23」形式
+    // 日付表示用フォーマッタ（フィルムっぽい「25 11 23」スタイル）
     private static let dateFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.dateFormat = "''yy MM dd"   // 例: '24 11 23
+        f.dateFormat = "yy MM dd"
         return f
     }()
 
-    /// メインの入口: 画像にレトロ加工 + 日付スタンプを付けて返す
+    /// メイン入口：レトロ加工 ＋ 右下に日付スタンプを焼き込んだ UIImage を返す
     static func apply(to uiImage: UIImage, date: Date = Date()) -> UIImage {
+        print("🟡 RetroFilter.apply start")
 
-        // --- 1. レトロ調の色味を作る（失敗したら元画像をそのまま使う） ---
-        let baseImage: UIImage
-
-        if let inputCI = CIImage(image: uiImage) {
-            let retroCI = makeRetroCIImage(from: inputCI)
-
-            // blur などで広がった範囲を元の大きさに戻す
-            let rect = inputCI.extent
-            let cropped = retroCI.cropped(to: rect)
-
-            if let cg = ciContext.createCGImage(cropped, from: rect) {
-                baseImage = UIImage(
-                    cgImage: cg,
-                    scale: uiImage.scale,
-                    orientation: uiImage.imageOrientation
-                )
-            } else {
-                // ここに来たらフィルターは諦めて元画像を使う
-                baseImage = uiImage
-            }
-        } else {
-            baseImage = uiImage
+        // 1. CIImage に変換
+        guard let inputCI = CIImage(image: uiImage) else {
+            print("❌ CIImage への変換に失敗。UIGraphics だけで日付を描画して返す")
+            return addDateStamp(to: uiImage, date: date)
         }
 
-        // --- 2. 右下に日付を焼き込む（必ず実行） ---
-        let stamped = addDateStamp(to: baseImage, date: date)
+        // 2. レトロ調フィルタ
+        let filteredCI = makeRetroCIImage(from: inputCI)
+
+        // 3. CIImage -> UIImage
+        guard let cgImage = ciContext.createCGImage(filteredCI, from: filteredCI.extent) else {
+            print("❌ createCGImage 失敗。元画像に日付だけ描画して返す")
+            return addDateStamp(to: uiImage, date: date)
+        }
+
+        let retroUIImage = UIImage(
+            cgImage: cgImage,
+            scale: uiImage.scale,
+            orientation: uiImage.imageOrientation
+        )
+
+        // 4. 日付スタンプ焼き込み
+        let stamped = addDateStamp(to: retroUIImage, date: date)
+        print("✅ RetroFilter.apply end")
         return stamped
     }
 
-    // MARK: - レトロ調フィルタ（色味・ノイズなど）
+    // MARK: - レトロ調フィルタ（色味など）
 
     private static func makeRetroCIImage(from input: CIImage) -> CIImage {
-        // コントラスト & 彩度を少し抑える
+        // コントラスト & 彩度
         let colorControls = CIFilter.colorControls()
         colorControls.inputImage = input
         colorControls.contrast = 1.1
@@ -59,7 +57,7 @@ struct RetroFilter {
         colorControls.brightness = -0.02
         var output = colorControls.outputImage ?? input
 
-        // 少しだけフィルムっぽい色ズレ
+        // ちょっと色ズレ
         if let chroma = CIFilter(name: "CIColorMatrix") {
             chroma.setValue(output, forKey: kCIInputImageKey)
             chroma.setValue(CIVector(x: 1.0, y: 0.0, z: 0.03, w: 0.0), forKey: "inputRVector")
@@ -70,59 +68,66 @@ struct RetroFilter {
             }
         }
 
-        // 軽いブラー（周辺が少し柔らかく見える程度）
+        // ごく軽いブラー
         let blur = CIFilter.gaussianBlur()
         blur.inputImage = output
         blur.radius = 0.8
-        output = blur.outputImage ?? output
+        output = blur.outputImage?.clampedToExtent() ?? output
 
         return output
     }
 
-    // MARK: - 日付スタンプ描画（右下）
+    // MARK: - 日付スタンプ描画（デジカメ風）
 
     private static func addDateStamp(to image: UIImage, date: Date) -> UIImage {
         let size = image.size
 
-        // 画像の短辺ベースで文字サイズ・余白を決める
+        // 画像の短辺ベースで文字サイズを決める
         let base = min(size.width, size.height)
-        let fontSize = base * 0.06        // 6% くらい → かなり見える大きさ
-        let margin  = base * 0.04        // 4% の余白
+        let fontSize = base * 0.045      // 少し大きめ
+        let margin  = base * 0.035       // 余白も少し増やす
 
         let dateString = dateFormatter.string(from: date)
 
-        let format = UIGraphicsImageRendererFormat()
-        format.scale = image.scale
-        format.opaque = true
+        let rendererFormat = UIGraphicsImageRendererFormat()
+        rendererFormat.scale = image.scale
+        rendererFormat.opaque = false
 
-        let renderer = UIGraphicsImageRenderer(size: size, format: format)
+        let renderer = UIGraphicsImageRenderer(size: size, format: rendererFormat)
 
         let stampedImage = renderer.image { ctx in
             // 元の画像を描画
             image.draw(in: CGRect(origin: .zero, size: size))
 
-            // 文字スタイル
+            // 右寄せ
             let paragraph = NSMutableParagraphStyle()
             paragraph.alignment = .right
 
-            // 影（フィルムのデジタル日付っぽい）
+            // デジカメのLEDっぽい色（アンバー寄り）
+            let textColor = UIColor(
+                red: 1.0,
+                green: 0.85,
+                blue: 0.35,
+                alpha: 0.98
+            )
+
+            // 影（少し強めにして光って見えるように）
             let shadow = NSShadow()
-            shadow.shadowBlurRadius = fontSize * 0.4
-            shadow.shadowOffset = .zero
-            shadow.shadowColor = UIColor.black.withAlphaComponent(0.8)
+            shadow.shadowBlurRadius = fontSize * 0.45
+            shadow.shadowOffset = CGSize(width: 0, height: 0)
+            shadow.shadowColor = UIColor.black.withAlphaComponent(0.9)
 
             let attributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.monospacedDigitSystemFont(ofSize: fontSize,
-                                                        weight: .regular),
-                .foregroundColor: UIColor(red: 1.0, green: 0.72, blue: 0.25, alpha: 1.0), // オレンジ寄り
+                .font: UIFont.monospacedDigitSystemFont(ofSize: fontSize, weight: .medium),
+                .foregroundColor: textColor,
                 .paragraphStyle: paragraph,
-                .shadow: shadow
+                .shadow: shadow,
+                // 文字間隔を少し広げてデジタル表示感を出す
+                .kern: fontSize * 0.12
             ]
 
-            // 文字のサイズを計算
+            // 描画サイズ・位置を計算（右下）
             let textSize = (dateString as NSString).size(withAttributes: attributes)
-
-            // 描画位置（右下）
             let drawRect = CGRect(
                 x: size.width - textSize.width - margin,
                 y: size.height - textSize.height - margin,
@@ -136,5 +141,6 @@ struct RetroFilter {
 
         return stampedImage
     }
+
 }
 

@@ -12,8 +12,7 @@ final class AppState: ObservableObject {
     static let shared = AppState()
 
     private init() {
-        // 起動時に保存済みデータを読み込む
-        load()
+        // 初期化のみ。load()はretomApp.swiftの.taskで呼び出す
     }
 
     // MARK: - 保存ファイルの場所

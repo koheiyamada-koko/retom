@@ -25,66 +25,67 @@ struct CameraView: View {
     }
 
     var body: some View {
-        ZStack {
-            // レイヤー構造（下から上へ）
-            
-            // ① 最下層：黄ばんだクリーム色の背景
-            Color(red: 0.95, green: 0.91, blue: 0.80)
-                .ignoresSafeArea()
-            
-            // ② 紙テクスチャ
-            Image("paperTexture")
-                .resizable()
-                .scaledToFill()
-                .ignoresSafeArea()
-                .blendMode(.multiply)
-                .opacity(0.4)
-            
-            // ③ グレインテクスチャ
-            Image("grainOverlay")
-                .resizable()
-                .scaledToFill()
-                .ignoresSafeArea()
-                .blendMode(.overlay)
-                .opacity(0.3)
-            
-            // ④ メインコンテンツ
-            VStack(spacing: 32) {
-                headerSection
-                previewSection
-                
-                Spacer()
-                
-                shutterSection
-                
-                Spacer()
-                    .frame(height: 24)
-            }
-            .padding(.horizontal, 24)
-            .padding(.top, 32)
-            
-            // ⑤ 光漏れ（左上）
-            Image("lightLeakTopLeft")
-                .resizable()
-                .scaledToFill()
-                .ignoresSafeArea()
-                .blendMode(.screen)
-                .opacity(0.35)
-            
-            // ⑥ 光漏れ（右下）
-            Image("lightLeakBottomRight")
-                .resizable()
-                .scaledToFill()
-                .ignoresSafeArea()
-                .blendMode(.screen)
-                .opacity(0.25)
-            
-            // ⑦ フラッシュ演出用オーバーレイ（最上層）
-            if showFlashOverlay {
-                Color.white
-                    .opacity(0.8)
+        GeometryReader { geometry in
+            ZStack {
+                // ① 最下層：黄ばんだクリーム色の背景
+                Color(red: 0.95, green: 0.91, blue: 0.80)
                     .ignoresSafeArea()
-                    .transition(.opacity)
+
+                // ② 紙テクスチャ
+                Image("paperTexture")
+                    .resizable()
+                    .scaledToFill()
+                    .ignoresSafeArea()
+                    .blendMode(.multiply)
+                    .opacity(0.4)
+
+                // ③ グレインテクスチャ
+                Image("grainOverlay")
+                    .resizable()
+                    .scaledToFill()
+                    .ignoresSafeArea()
+                    .blendMode(.overlay)
+                    .opacity(0.3)
+
+                // ④ メインコンテンツ（セーフエリア内）
+                VStack(spacing: 32) {
+                    headerSection
+                    previewSection
+
+                    Spacer()
+
+                    shutterSection
+
+                    Spacer()
+                        .frame(height: 24)
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, geometry.safeAreaInsets.top + 16)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
+                // ⑤ 光漏れ（左上）
+                Image("lightLeakTopLeft")
+                    .resizable()
+                    .scaledToFill()
+                    .ignoresSafeArea()
+                    .blendMode(.screen)
+                    .opacity(0.35)
+
+                // ⑥ 光漏れ（右下）
+                Image("lightLeakBottomRight")
+                    .resizable()
+                    .scaledToFill()
+                    .ignoresSafeArea()
+                    .blendMode(.screen)
+                    .opacity(0.25)
+
+                // ⑦ フラッシュ演出用オーバーレイ（最上層）
+                if showFlashOverlay {
+                    Color.white
+                        .opacity(0.8)
+                        .ignoresSafeArea()
+                        .transition(.opacity)
+                }
             }
         }
         .sheet(isPresented: $showPicker) {
@@ -138,13 +139,16 @@ struct CameraView: View {
                 Text("保存されている写真：\(appState.photos.count)枚")
                     .font(.subheadline)
                     .foregroundColor(Color(red: 0.35, green: 0.3, blue: 0.25))
-                
-                // 無料版の場合、残り枚数を表示
+
                 if !purchaseManager.isProUser {
                     let remaining = max(0, 50 - appState.totalSavedCount)
                     Text("残り\(remaining)枚（無料版）")
                         .font(.caption)
-                        .foregroundColor(remaining <= 5 ? Color(red: 0.7, green: 0.3, blue: 0.2) : Color(red: 0.45, green: 0.4, blue: 0.35))
+                        .foregroundColor(
+                            remaining <= 5
+                            ? Color(red: 0.7, green: 0.3, blue: 0.2)
+                            : Color(red: 0.45, green: 0.4, blue: 0.35)
+                        )
                 } else {
                     Text("Pro版：無制限")
                         .font(.caption)
@@ -154,7 +158,6 @@ struct CameraView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
             .background(
-                // ボーダーなし、柔らかい影で区切りを表現
                 RoundedRectangle(cornerRadius: 16)
                     .fill(Color.white.opacity(0.6))
                     .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
@@ -167,7 +170,6 @@ struct CameraView: View {
 
     private var previewSection: some View {
         ZStack {
-            // 外側の影（プラスチックパーツっぽい存在感）
             RoundedRectangle(cornerRadius: 24)
                 .fill(
                     LinearGradient(
@@ -180,13 +182,11 @@ struct CameraView: View {
                     )
                 )
                 .shadow(color: Color.black.opacity(0.45), radius: 26, x: 0, y: 18)
-            
-            // 内側のプレビューエリア
+
             RoundedRectangle(cornerRadius: 20)
                 .fill(Color.black)
                 .padding(4)
                 .overlay(
-                    // インナーシャドウ風の縁取り
                     RoundedRectangle(cornerRadius: 20)
                         .strokeBorder(
                             LinearGradient(
@@ -203,9 +203,7 @@ struct CameraView: View {
                         .padding(4)
                 )
 
-            // 中身：実機ならカメラ映像、シミュレータならダミー表示
             #if targetEnvironment(simulator)
-            // 🔹 シミュレータ用：今までどおりのダミープレビュー
             VStack {
                 Text("シミュレータでは\nフォトライブラリから選択")
                     .font(.callout)
@@ -217,14 +215,12 @@ struct CameraView: View {
             .clipShape(RoundedRectangle(cornerRadius: 20))
             .padding(4)
             #else
-            // 🔹 実機用：本物のカメラプレビュー
             CameraPreviewView(service: cameraService)
                 .clipShape(RoundedRectangle(cornerRadius: 20))
                 .clipped()
                 .padding(4)
             #endif
 
-            // 上下の穴っぽい装飾（黄緑寄りの古いプラスチック感）
             VStack {
                 capsuleRow
                 Spacer()
@@ -251,22 +247,18 @@ struct CameraView: View {
     private var shutterSection: some View {
         VStack(spacing: 16) {
             Button {
-                // ✅ 先にフラッシュ/縮みアニメーション
                 triggerShutterAnimation()
 
-                // ✅ 少し待ってから Picker を開く
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                     showPicker = true
                 }
             } label: {
                 ZStack {
-                    // 外側のリング（暗めのベージュ、立体感のある影）
                     Circle()
                         .fill(Color(red: 0.90, green: 0.84, blue: 0.72))
                         .frame(width: 96, height: 96)
                         .shadow(color: Color.black.opacity(0.35), radius: 20, x: 0, y: 12)
 
-                    // 内側ボタン（RadialGradientで光沢感）
                     Circle()
                         .fill(
                             RadialGradient(
@@ -282,7 +274,6 @@ struct CameraView: View {
                         )
                         .frame(width: 80, height: 80)
                         .overlay(
-                            // 外周の薄いハイライトリング
                             Circle()
                                 .strokeBorder(
                                     LinearGradient(
@@ -314,15 +305,12 @@ struct CameraView: View {
     // MARK: - シャッター演出ロジック
 
     private func triggerShutterAnimation() {
-        // ボタン縮小
         isShutterPressed = true
 
-        // フラッシュ表示
         withAnimation(.easeOut(duration: 0.08)) {
             showFlashOverlay = true
         }
 
-        // 少しだけ時間をおいて元に戻す
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
             isShutterPressed = false
         }
@@ -334,3 +322,4 @@ struct CameraView: View {
         }
     }
 }
+

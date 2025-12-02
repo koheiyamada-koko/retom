@@ -117,7 +117,7 @@ final class AppState: ObservableObject {
         // 📌 2. JPEGデータ生成
         guard let data = processed.jpegData(compressionQuality: 0.9) else {
             print("❌ JPEG変換に失敗")
-            return
+            return .jpegConversionFailed
         }
 
         // 📌 3. Documentsフォルダ取得
@@ -131,7 +131,7 @@ final class AppState: ObservableObject {
             try data.write(to: url, options: .atomic)
         } catch {
             print("❌ 画像の保存に失敗: \(error)")
-            return
+            return .fileWriteFailed
         }
 
         // 📌 5. PhotoItem を作成して先頭に追加
@@ -196,11 +196,17 @@ final class AppState: ObservableObject {
 
 enum PhotoSaveError: LocalizedError {
     case limitReached
+    case jpegConversionFailed
+    case fileWriteFailed
     
     var errorDescription: String? {
         switch self {
         case .limitReached:
             return "無料版の撮影上限（50枚）に達しました"
+        case .jpegConversionFailed:
+            return "画像の変換に失敗しました"
+        case .fileWriteFailed:
+            return "画像の保存に失敗しました"
         }
     }
 }

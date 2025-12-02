@@ -3,7 +3,9 @@ import SwiftUI
 
 struct CameraView: View {
     @EnvironmentObject var appState: AppState
+    @EnvironmentObject var purchaseManager: PurchaseManager
     @State private var showPicker = false
+    @State private var showUpgradeView = false
 
     // カメラプレビュー用サービス
     @StateObject private var cameraService = CameraPreviewService()
@@ -53,11 +55,21 @@ struct CameraView: View {
         .sheet(isPresented: $showPicker) {
             CameraPicker(from: pickerSource) { uiImage in
                 if let uiImage = uiImage {
-                    appState.addPhoto(from: uiImage)
+                    // 保存を試みる
+                    if let error = appState.addPhoto(from: uiImage, isProUser: purchaseManager.isProUser) {
+                        // 制限に達した場合はアップグレード画面を表示
+                        if error == .limitReached {
+                            showUpgradeView = true
+                        }
+                    }
                 }
                 // ✅ シートを閉じたことを状態にも反映する
                 showPicker = false
             }
+        }
+        .sheet(isPresented: $showUpgradeView) {
+            UpgradeView()
+                .environmentObject(purchaseManager)
         }
         // CameraView.swift 内
 
@@ -87,15 +99,29 @@ struct CameraView: View {
                     .font(.title3.bold())
             }
 
-            Text("保存されている写真：\(appState.photos.count)枚")
-                .font(.subheadline)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(
-                    Capsule()
-                        .fill(Color.white.opacity(0.9))
-                        .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
-                )
+            VStack(alignment: .leading, spacing: 4) {
+                Text("保存されている写真：\(appState.photos.count)枚")
+                    .font(.subheadline)
+                
+                // 無料版の場合、残り枚数を表示
+                if !purchaseManager.isProUser {
+                    let remaining = max(0, 50 - appState.totalSavedCount)
+                    Text("残り\(remaining)枚（無料版）")
+                        .font(.caption)
+                        .foregroundColor(remaining <= 5 ? .red : .secondary)
+                } else {
+                    Text("Pro版：無制限")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(
+                Capsule()
+                    .fill(Color.white.opacity(0.9))
+                    .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+            )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

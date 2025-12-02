@@ -3,6 +3,7 @@ import SwiftUI
 import UIKit
 
 /// アプリ全体で共有する状態
+@MainActor
 final class AppState: ObservableObject {
 
     // 公開プロパティ：アルバムに表示する写真たち
@@ -36,6 +37,14 @@ final class AppState: ObservableObject {
             let data = try Data(contentsOf: url)
             let decoded = try JSONDecoder().decode([PhotoItem].self, from: data)
             self.photos = decoded
+            
+            // 既存の写真数から保存枚数を初期化（初回起動時や不整合を防ぐ）
+            let currentCount = totalSavedCount
+            let actualCount = decoded.count
+            if currentCount < actualCount {
+                // 実際の写真数が多い場合は、そちらに合わせる
+                UserDefaults.standard.set(actualCount, forKey: UserDefaultsKeys.totalSavedCount)
+            }
         } catch {
             // 初回起動など、ファイルが無いときはここに来るので警告だけ
             print("⚠️ AppState load failed: \(error)")
@@ -53,9 +62,55 @@ final class AppState: ObservableObject {
         }
     }
 
+    // MARK: - 保存枚数管理
+    
+    /// 無料版の撮影・保存上限枚数
+    private let freeVersionLimit = 50
+    
+    /// 現在の保存済み枚数（UserDefaultsから読み込み）
+    var totalSavedCount: Int {
+        UserDefaults.standard.integer(forKey: UserDefaultsKeys.totalSavedCount)
+    }
+    
+    /// 保存可能かどうかをチェック
+    /// - Parameter isProUser: Pro版購入済みかどうか
+    /// - Returns: 保存可能な場合true
+    func canSavePhoto(isProUser: Bool) -> Bool {
+        // Pro版ユーザーは無制限
+        if isProUser {
+            return true
+        }
+        // 無料版は50枚まで
+        return totalSavedCount < freeVersionLimit
+    }
+    
+    /// 保存枚数をインクリメント
+    private func incrementSavedCount() {
+        let current = totalSavedCount
+        UserDefaults.standard.set(current + 1, forKey: UserDefaultsKeys.totalSavedCount)
+    }
+    
+    /// 保存枚数をデクリメント（削除時用）
+    private func decrementSavedCount() {
+        let current = totalSavedCount
+        if current > 0 {
+            UserDefaults.standard.set(current - 1, forKey: UserDefaultsKeys.totalSavedCount)
+        }
+    }
+
     // MARK: - 写真追加（レトロ加工 + 日付スタンプ付き）
 
-    func addPhoto(from uiImage: UIImage) {
+    /// 写真を追加（レトロ加工 + 日付スタンプ付き）
+    /// - Parameters:
+    ///   - uiImage: 追加する画像
+    ///   - isProUser: Pro版購入済みかどうか
+    /// - Returns: 成功した場合nil、制限に達した場合PhotoSaveError.limitReached
+    func addPhoto(from uiImage: UIImage, isProUser: Bool) -> PhotoSaveError? {
+        // 📌 0. 保存可能かチェック
+        guard canSavePhoto(isProUser: isProUser) else {
+            return .limitReached
+        }
+        
         // 📌 1. RetroFilter でレトロ加工＋日付焼き込み
         let processed = RetroFilter.apply(to: uiImage, date: Date())
 
@@ -88,20 +143,25 @@ final class AppState: ObservableObject {
 
         photos.insert(item, at: 0)
         save()
+        
+        // 📌 6. 保存枚数をインクリメント
+        incrementSavedCount()
+        
+        return nil // 成功
     }
 
 
     // MARK: - おまけ：ダミー写真追加（テスト用）
 
     /// グレーのダミー画像を1枚追加したいとき用（テスト用）
-    func addDummyPhoto() {
+    func addDummyPhoto(isProUser: Bool) {
         let size = CGSize(width: 800, height: 600)
         let renderer = UIGraphicsImageRenderer(size: size)
         let image = renderer.image { ctx in
             UIColor.systemGray4.setFill()
             ctx.fill(CGRect(origin: .zero, size: size))
         }
-        addPhoto(from: image)
+        _ = addPhoto(from: image, isProUser: isProUser)
     }
     
     //------------------------------------
@@ -123,9 +183,25 @@ final class AppState: ObservableObject {
         // 2. メモリ上の配列から削除
         photos.removeAll { $0.id == photo.id }
 
-        // 3. JSON も更新
+        // 3. 保存枚数をデクリメント
+        decrementSavedCount()
+
+        // 4. JSON も更新
         save()
     }
 
+}
+
+// MARK: - Photo Save Errors
+
+enum PhotoSaveError: LocalizedError {
+    case limitReached
+    
+    var errorDescription: String? {
+        switch self {
+        case .limitReached:
+            return "無料版の撮影上限（50枚）に達しました"
+        }
+    }
 }
 

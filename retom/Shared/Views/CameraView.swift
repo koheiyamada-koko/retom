@@ -25,29 +25,44 @@ struct CameraView: View {
     }
 
     var body: some View {
-        GeometryReader { geometry in
+        GeometryReader { proxy in
             ZStack {
-                // ① 最下層：黄ばんだクリーム色の背景
-                Color(red: 0.95, green: 0.91, blue: 0.80)
-                    .ignoresSafeArea()
+                // ===== 背景レイヤー（画面全体に敷く）=====
+                ZStack {
+                    // ① 最下層：黄ばんだクリーム色の背景
+                    Color(red: 0.95, green: 0.91, blue: 0.80)
 
-                // ② 紙テクスチャ
-                Image("paperTexture")
-                    .resizable()
-                    .scaledToFill()
-                    .ignoresSafeArea()
-                    .blendMode(.multiply)
-                    .opacity(0.4)
+                    // ② 紙テクスチャ
+                    Image("paperTexture")
+                        .resizable()
+                        .scaledToFill()
+                        .blendMode(.multiply)
+                        .opacity(0.4)
 
-                // ③ グレインテクスチャ
-                Image("grainOverlay")
-                    .resizable()
-                    .scaledToFill()
-                    .ignoresSafeArea()
-                    .blendMode(.overlay)
-                    .opacity(0.3)
+                    // ③ グレインテクスチャ
+                    Image("grainOverlay")
+                        .resizable()
+                        .scaledToFill()
+                        .blendMode(.overlay)
+                        .opacity(0.3)
 
-                // ④ メインコンテンツ（セーフエリア内）
+                    // ⑤ 光漏れ（左上）
+                    Image("lightLeakTopLeft")
+                        .resizable()
+                        .scaledToFill()
+                        .blendMode(.screen)
+                        .opacity(0.35)
+
+                    // ⑥ 光漏れ（右下）
+                    Image("lightLeakBottomRight")
+                        .resizable()
+                        .scaledToFill()
+                        .blendMode(.screen)
+                        .opacity(0.25)
+                }
+                .ignoresSafeArea()   // 背景だけフルスクリーン
+
+                // ===== メインコンテンツ（Safe Area 内）=====
                 VStack(spacing: 32) {
                     headerSection
                     previewSection
@@ -55,31 +70,19 @@ struct CameraView: View {
                     Spacer()
 
                     shutterSection
-
-                    Spacer()
-                        .frame(height: 24)
                 }
                 .padding(.horizontal, 24)
-                .padding(.top, geometry.safeAreaInsets.top + 16)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                // ノッチ分 + 余白を足して、上を開ける
+                .padding(.top, proxy.safeAreaInsets.top + 8)
+                // 下もホームバーにかぶらないよう少し余白
+                .padding(.bottom, max(proxy.safeAreaInsets.bottom, 16))
+                .frame(
+                    maxWidth: .infinity,
+                    maxHeight: .infinity,
+                    alignment: .top
+                )
 
-                // ⑤ 光漏れ（左上）
-                Image("lightLeakTopLeft")
-                    .resizable()
-                    .scaledToFill()
-                    .ignoresSafeArea()
-                    .blendMode(.screen)
-                    .opacity(0.35)
-
-                // ⑥ 光漏れ（右下）
-                Image("lightLeakBottomRight")
-                    .resizable()
-                    .scaledToFill()
-                    .ignoresSafeArea()
-                    .blendMode(.screen)
-                    .opacity(0.25)
-
-                // ⑦ フラッシュ演出用オーバーレイ（最上層）
+                // ===== フラッシュ演出用オーバーレイ（最上層）=====
                 if showFlashOverlay {
                     Color.white
                         .opacity(0.8)
@@ -170,6 +173,7 @@ struct CameraView: View {
 
     private var previewSection: some View {
         ZStack {
+            // 外側の影（プラスチックパーツっぽい存在感）
             RoundedRectangle(cornerRadius: 24)
                 .fill(
                     LinearGradient(
@@ -183,6 +187,7 @@ struct CameraView: View {
                 )
                 .shadow(color: Color.black.opacity(0.45), radius: 26, x: 0, y: 18)
 
+            // 内側のプレビューエリア
             RoundedRectangle(cornerRadius: 20)
                 .fill(Color.black)
                 .padding(4)
@@ -221,6 +226,7 @@ struct CameraView: View {
                 .padding(4)
             #endif
 
+            // 上下の穴っぽい装飾
             VStack {
                 capsuleRow
                 Spacer()

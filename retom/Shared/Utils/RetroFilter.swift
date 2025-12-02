@@ -46,46 +46,65 @@ struct RetroFilter {
         return stamped
     }
 
-    // MARK: - レトロ調フィルタ（色味・粒子・ビネット）
+    // MARK: - レトロ調フィルタ（FUJI Classic Chrome風の色味・粒子・ビネット）
 
     private static func makeRetroCIImage(from input: CIImage) -> CIImage {
         var output = input
 
-        // ① トーンカーブで少し眠いコントラストに
-        do {
-            let tone = CIFilter.toneCurve()
-            tone.inputImage = output
-            // 黒少し持ち上げ・ハイライト強め
-            tone.point0 = CGPoint(x: 0.0, y: 0.05)
-            tone.point1 = CGPoint(x: 0.25, y: 0.18)
-            tone.point2 = CGPoint(x: 0.5, y: 0.5)
-            tone.point3 = CGPoint(x: 0.75, y: 0.82)
-            tone.point4 = CGPoint(x: 1.0, y: 0.98)
-            output = tone.outputImage ?? output
-        }
-
-        // ② 彩度・コントラストの微調整
-        do {
-            let controls = CIFilter.colorControls()
-            controls.inputImage = output
-            controls.saturation = 0.85    // 少し彩度を落とす
-            controls.contrast = 1.05      // わずかにコントラスト
-            controls.brightness = -0.03   // ほんの少し暗く
-            output = controls.outputImage ?? output
-        }
-
-        // ③ 色温度を少し暖色寄りに（夕方フィルムっぽく）
+        // ① 色温度をクール寄りに調整（FUJI Classic Chrome風：わずかに青みを加える）
         do {
             let temp = CIFilter.temperatureAndTint()
             temp.inputImage = output
-            // neutral: 元のホワイトバランス付近
             temp.neutral = CIVector(x: 6500, y: 0)
-            // targetNeutral: 少し低い色温度＆マゼンタ寄り
-            temp.targetNeutral = CIVector(x: 5200, y: 12)
+            // 色温度を上げてクール寄りに（青みを加える）、グリーン寄りに微調整
+            temp.targetNeutral = CIVector(x: 7200, y: -8)
             output = temp.outputImage ?? output
         }
 
-        // ④ ランダムノイズを重ねてフィルム粒子っぽく
+        // ② 色チャンネル調整：緑と青を少し強調、赤を抑えめに（FUJIっぽい色バランス）
+        do {
+            if let colorMatrix = CIFilter(name: "CIColorMatrix") {
+                colorMatrix.setValue(output, forKey: kCIInputImageKey)
+                // 赤チャンネルを少し抑えめ（0.96倍）
+                colorMatrix.setValue(CIVector(x: 0.96, y: 0, z: 0, w: 0), forKey: "inputRVector")
+                // 緑チャンネルを少し強調（1.08倍）
+                colorMatrix.setValue(CIVector(x: 0, y: 1.08, z: 0, w: 0), forKey: "inputGVector")
+                // 青チャンネルを少し強調（1.06倍）
+                colorMatrix.setValue(CIVector(x: 0, y: 0, z: 1.06, w: 0), forKey: "inputBVector")
+                // アルファはそのまま
+                colorMatrix.setValue(CIVector(x: 0, y: 0, z: 0, w: 1), forKey: "inputAVector")
+                // バイアスなし
+                colorMatrix.setValue(CIVector(x: 0, y: 0, z: 0, w: 0), forKey: "inputBiasVector")
+                if let result = colorMatrix.outputImage {
+                    output = result
+                }
+            }
+        }
+
+        // ③ トーンカーブ：ハイライトは飛ばさず、シャドウは潰さない（FUJIのトーン特性）
+        do {
+            let tone = CIFilter.toneCurve()
+            tone.inputImage = output
+            // シャドウを少し持ち上げ（潰さない）、ハイライトは控えめに
+            tone.point0 = CGPoint(x: 0.0, y: 0.03)      // 黒を少し持ち上げ
+            tone.point1 = CGPoint(x: 0.25, y: 0.20)     // シャドウ領域
+            tone.point2 = CGPoint(x: 0.5, y: 0.50)      // ミッドトーン
+            tone.point3 = CGPoint(x: 0.75, y: 0.80)     // ハイライト手前
+            tone.point4 = CGPoint(x: 1.0, y: 0.95)      // ハイライトを飛ばさない
+            output = tone.outputImage ?? output
+        }
+
+        // ④ 彩度・コントラスト調整（FUJI Classic Chrome風：やや強めのコントラスト、控えめな彩度）
+        do {
+            let controls = CIFilter.colorControls()
+            controls.inputImage = output
+            controls.saturation = 0.92    // 少し控えめだが、緑と青は鮮やかに見える
+            controls.contrast = 1.12       // やや強めのコントラスト
+            controls.brightness = 0.0     // 明るさは維持
+            output = controls.outputImage ?? output
+        }
+
+        // ⑤ ランダムノイズを重ねてフィルム粒子っぽく
         do {
             let noise = CIFilter.randomGenerator()
             if let rawNoise = noise.outputImage?
@@ -109,7 +128,7 @@ struct RetroFilter {
             }
         }
 
-        // ⑤ 周辺減光（ビネット）
+        // ⑥ 周辺減光（ビネット）
         do {
             let vignette = CIFilter.vignette()
             vignette.inputImage = output

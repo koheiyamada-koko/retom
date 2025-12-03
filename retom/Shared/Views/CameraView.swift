@@ -54,32 +54,22 @@ struct CameraView: View {
             .ignoresSafeArea()
 
             // ===== コンテンツ =====
-            VStack(spacing: 32) {
+            VStack(spacing: 20) {
                 headerSection
+                    .frame(maxWidth: 320)
+                    .frame(maxWidth: .infinity)
 
-                // プレビュー枠を “箱に入れて中央寄せ”
-                HStack {
-                    Spacer()
-                    previewSection
-                        .frame(maxWidth: 360)   // ここで横幅の上限を決める
-                    Spacer()
-                }
+                previewSection
+                    .frame(maxWidth: 320)
+                    .frame(maxWidth: .infinity)
 
-                Spacer()
-
-                // シャッターボタンも同じく中央寄せ
-                HStack {
-                    Spacer()
-                    shutterSection
-                        .frame(maxWidth: 220)   // ボタンの横幅の上限
-                    Spacer()
-                }
-
-                Spacer()
-                    .frame(height: 24)
+                shutterSection
+                    .frame(maxWidth: 320)
+                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, 40)
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 32)
+            .padding(.horizontal)
+            .padding(.top, 20)
 
             // ===== フラッシュ =====
             if showFlashOverlay {
@@ -120,7 +110,7 @@ struct CameraView: View {
     // MARK: - Header
 
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(spacing: 8) {
             Text("カメラ")
                 .font(.largeTitle.bold())
                 .foregroundColor(Color(red: 0.3, green: 0.25, blue: 0.2))
@@ -133,7 +123,7 @@ struct CameraView: View {
                     .foregroundColor(Color(red: 0.4, green: 0.35, blue: 0.3))
             }
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(spacing: 4) {
                 Text("保存されている写真：\(appState.photos.count)枚")
                     .font(.subheadline)
                     .foregroundColor(Color(red: 0.35, green: 0.3, blue: 0.25))
@@ -161,7 +151,7 @@ struct CameraView: View {
                     .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
             )
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     // MARK: - プレビュー枠

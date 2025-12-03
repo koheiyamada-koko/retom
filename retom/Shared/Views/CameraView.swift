@@ -8,101 +8,96 @@ struct CameraView: View {
     @State private var showPicker = false
     @State private var showUpgradeView = false
 
-    // カメラプレビュー用サービス
     @StateObject private var cameraService = CameraPreviewService()
 
-    // シャッターボタン演出用の状態
     @State private var isShutterPressed = false
     @State private var showFlashOverlay = false
 
-    // シミュレータではフォトライブラリ、実機ではカメラ優先
     private var pickerSource: CameraPicker.Source {
         #if targetEnvironment(simulator)
-        return .library          // シミュレータはライブラリ固定
+        return .library
         #else
-        return .camera           // 実機ではカメラ優先
+        return .camera
         #endif
     }
 
     var body: some View {
-        GeometryReader { proxy in
+        ZStack {
+            // ===== 背景レイヤー =====
             ZStack {
-                // ===== 背景レイヤー（画面全体に敷く）=====
-                ZStack {
-                    // ① 最下層：黄ばんだクリーム色の背景
-                    Color(red: 0.95, green: 0.91, blue: 0.80)
+                Color(red: 0.95, green: 0.91, blue: 0.80)
 
-                    // ② 紙テクスチャ
-                    Image("paperTexture")
-                        .resizable()
-                        .scaledToFill()
-                        .blendMode(.multiply)
-                        .opacity(0.4)
+                Image("paperTexture")
+                    .resizable()
+                    .scaledToFill()
+                    .blendMode(.multiply)
+                    .opacity(0.4)
 
-                    // ③ グレインテクスチャ
-                    Image("grainOverlay")
-                        .resizable()
-                        .scaledToFill()
-                        .blendMode(.overlay)
-                        .opacity(0.3)
+                Image("grainOverlay")
+                    .resizable()
+                    .scaledToFill()
+                    .blendMode(.overlay)
+                    .opacity(0.3)
 
-                    // ⑤ 光漏れ（左上）
-                    Image("lightLeakTopLeft")
-                        .resizable()
-                        .scaledToFill()
-                        .blendMode(.screen)
-                        .opacity(0.35)
+                Image("lightLeakTopLeft")
+                    .resizable()
+                    .scaledToFill()
+                    .blendMode(.screen)
+                    .opacity(0.35)
 
-                    // ⑥ 光漏れ（右下）
-                    Image("lightLeakBottomRight")
-                        .resizable()
-                        .scaledToFill()
-                        .blendMode(.screen)
-                        .opacity(0.25)
-                }
-                .ignoresSafeArea()   // 背景だけフルスクリーン
+                Image("lightLeakBottomRight")
+                    .resizable()
+                    .scaledToFill()
+                    .blendMode(.screen)
+                    .opacity(0.25)
+            }
+            .ignoresSafeArea()
 
-                // ===== メインコンテンツ（Safe Area 内）=====
-                VStack(spacing: 32) {
-                    headerSection
-                    previewSection
+            // ===== コンテンツ =====
+            VStack(spacing: 32) {
+                headerSection
 
+                // プレビュー枠を “箱に入れて中央寄せ”
+                HStack {
                     Spacer()
+                    previewSection
+                        .frame(maxWidth: 360)   // ここで横幅の上限を決める
+                    Spacer()
+                }
 
+                Spacer()
+
+                // シャッターボタンも同じく中央寄せ
+                HStack {
+                    Spacer()
                     shutterSection
+                        .frame(maxWidth: 220)   // ボタンの横幅の上限
+                    Spacer()
                 }
-                .padding(.horizontal, 24)
-                // ノッチ分 + 余白を足して、上を開ける
-                .padding(.top, proxy.safeAreaInsets.top + 8)
-                // 下もホームバーにかぶらないよう少し余白
-                .padding(.bottom, max(proxy.safeAreaInsets.bottom, 16))
-                .frame(
-                    maxWidth: .infinity,
-                    maxHeight: .infinity,
-                    alignment: .top
-                )
 
-                // ===== フラッシュ演出用オーバーレイ（最上層）=====
-                if showFlashOverlay {
-                    Color.white
-                        .opacity(0.8)
-                        .ignoresSafeArea()
-                        .transition(.opacity)
-                }
+                Spacer()
+                    .frame(height: 24)
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 32)
+
+            // ===== フラッシュ =====
+            if showFlashOverlay {
+                Color.white
+                    .opacity(0.8)
+                    .ignoresSafeArea()
+                    .transition(.opacity)
             }
         }
         .sheet(isPresented: $showPicker) {
             CameraPicker(from: pickerSource) { uiImage in
                 if let uiImage = uiImage {
-                    // 保存を試みる
                     if let error = appState.addPhoto(from: uiImage, isProUser: purchaseManager.isProUser) {
-                        // 制限に達した場合はアップグレード画面を表示
                         if error == .limitReached {
                             showUpgradeView = true
                         }
                     }
                 }
-                // ✅ シートを閉じたことを状態にも反映する
                 showPicker = false
             }
         }
@@ -122,7 +117,7 @@ struct CameraView: View {
         }
     }
 
-    // MARK: - Header（タイトル等）
+    // MARK: - Header
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -169,11 +164,10 @@ struct CameraView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // MARK: - プレビュー枠（写ルンです風ファインダー）
+    // MARK: - プレビュー枠
 
     private var previewSection: some View {
         ZStack {
-            // 外側の影（プラスチックパーツっぽい存在感）
             RoundedRectangle(cornerRadius: 24)
                 .fill(
                     LinearGradient(
@@ -187,7 +181,6 @@ struct CameraView: View {
                 )
                 .shadow(color: Color.black.opacity(0.45), radius: 26, x: 0, y: 18)
 
-            // 内側のプレビューエリア
             RoundedRectangle(cornerRadius: 20)
                 .fill(Color.black)
                 .padding(4)
@@ -226,7 +219,6 @@ struct CameraView: View {
                 .padding(4)
             #endif
 
-            // 上下の穴っぽい装飾
             VStack {
                 capsuleRow
                 Spacer()
@@ -248,7 +240,7 @@ struct CameraView: View {
         }
     }
 
-    // MARK: - シャッターボタン（樹脂の丸ボタン風）
+    // MARK: - シャッターボタン
 
     private var shutterSection: some View {
         VStack(spacing: 16) {
@@ -305,10 +297,9 @@ struct CameraView: View {
                 .font(.footnote)
                 .foregroundColor(Color(red: 0.5, green: 0.45, blue: 0.4))
         }
-        .frame(maxWidth: .infinity)
     }
 
-    // MARK: - シャッター演出ロジック
+    // MARK: - シャッター演出
 
     private func triggerShutterAnimation() {
         isShutterPressed = true

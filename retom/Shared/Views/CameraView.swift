@@ -2,6 +2,29 @@
 import SwiftUI
 import CoreImage
 
+private enum CameraLayoutConstants {
+    static let panelWidth: CGFloat = 320
+    static let sectionSpacing: CGFloat = 20
+    static let headerSpacing: CGFloat = 12
+    static let topPadding: CGFloat = 20
+    static let bottomPadding: CGFloat = 40
+    static let horizontalPadding: CGFloat = 20
+
+    static let paperTextureOpacity: Double = 0.4
+    static let grainOpacity: Double = 0.3
+    static let lightLeakTopLeftOpacity: Double = 0.35
+    static let lightLeakBottomRightOpacity: Double = 0.25
+
+    static let previewHeight: CGFloat = 280
+}
+
+private extension View {
+    func centerPanel(maxWidth: CGFloat = CameraLayoutConstants.panelWidth) -> some View {
+        frame(maxWidth: maxWidth)
+            .frame(maxWidth: .infinity, alignment: .center)
+    }
+}
+
 struct CameraView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var purchaseManager: PurchaseManager
@@ -31,45 +54,45 @@ struct CameraView: View {
                     .resizable()
                     .scaledToFill()
                     .blendMode(.multiply)
-                    .opacity(0.4)
+                    .opacity(CameraLayoutConstants.paperTextureOpacity)
 
                 Image("grainOverlay")
                     .resizable()
                     .scaledToFill()
                     .blendMode(.overlay)
-                    .opacity(0.3)
+                    .opacity(CameraLayoutConstants.grainOpacity)
 
                 Image("lightLeakTopLeft")
                     .resizable()
                     .scaledToFill()
                     .blendMode(.screen)
-                    .opacity(0.35)
+                    .opacity(CameraLayoutConstants.lightLeakTopLeftOpacity)
 
                 Image("lightLeakBottomRight")
                     .resizable()
                     .scaledToFill()
                     .blendMode(.screen)
-                    .opacity(0.25)
+                    .opacity(CameraLayoutConstants.lightLeakBottomRightOpacity)
             }
             .ignoresSafeArea()
 
             // ===== コンテンツ =====
-            VStack(spacing: 20) {
-                headerSection
-                    .frame(maxWidth: 320)
-                    .frame(maxWidth: .infinity, alignment: .center)
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: CameraLayoutConstants.sectionSpacing) {
+                    headerSection
+                        .centerPanel()
 
-                previewSection
-                    .frame(maxWidth: 320)
-                    .frame(maxWidth: .infinity, alignment: .center)
+                    previewSection
+                        .centerPanel()
 
-                shutterSection
-                    .frame(maxWidth: 320)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.bottom, 40)
+                    shutterSection
+                        .centerPanel()
+                }
+                .padding(.horizontal, CameraLayoutConstants.horizontalPadding)
+                .padding(.top, CameraLayoutConstants.topPadding)
+                .padding(.bottom, CameraLayoutConstants.bottomPadding)
+                .frame(maxWidth: .infinity, alignment: .center)
             }
-            .padding(.horizontal)
-            .padding(.top, 20)
 
             // ===== フラッシュ =====
             if showFlashOverlay {
@@ -110,10 +133,12 @@ struct CameraView: View {
     // MARK: - Header
 
     private var headerSection: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: CameraLayoutConstants.headerSpacing) {
             Text("カメラ")
                 .font(.largeTitle.bold())
                 .foregroundColor(Color(red: 0.3, green: 0.25, blue: 0.2))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
                 .multilineTextAlignment(.center)
 
             HStack(spacing: 8) {
@@ -122,6 +147,8 @@ struct CameraView: View {
                 Text("retom フィルムカメラ")
                     .font(.title3.bold())
                     .foregroundColor(Color(red: 0.4, green: 0.35, blue: 0.3))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
                     .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity, alignment: .center)
@@ -140,11 +167,15 @@ struct CameraView: View {
                             ? Color(red: 0.7, green: 0.3, blue: 0.2)
                             : Color(red: 0.45, green: 0.4, blue: 0.35)
                         )
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                         .multilineTextAlignment(.center)
                 } else {
                     Text("Pro版：無制限")
                         .font(.caption)
                         .foregroundColor(Color(red: 0.4, green: 0.5, blue: 0.6))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                         .multilineTextAlignment(.center)
                 }
             }
@@ -224,7 +255,7 @@ struct CameraView: View {
             .padding(.horizontal, 40)
             .padding(.vertical, 26)
         }
-        .frame(height: 280)
+        .frame(height: CameraLayoutConstants.previewHeight)
     }
 
     private var capsuleRow: some View {
@@ -293,6 +324,8 @@ struct CameraView: View {
             Text("シャッター（フォトライブラリ）")
                 .font(.footnote)
                 .foregroundColor(Color(red: 0.5, green: 0.45, blue: 0.4))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
         }
     }
 

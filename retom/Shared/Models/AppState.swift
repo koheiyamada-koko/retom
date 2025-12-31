@@ -48,7 +48,9 @@ final class AppState: ObservableObject {
             }
         } catch {
             // 初回起動など、ファイルが無いときはここに来るので警告だけ
+            #if DEBUG
             print("⚠️ AppState load failed: \(error)")
+            #endif
         }
     }
 
@@ -59,7 +61,9 @@ final class AppState: ObservableObject {
             let data = try JSONEncoder().encode(photos)
             try data.write(to: url, options: .atomic)
         } catch {
+            #if DEBUG
             print("⚠️ AppState save failed: \(error)")
+            #endif
         }
     }
 
@@ -108,7 +112,9 @@ final class AppState: ObservableObject {
     /// - Returns: 成功した場合nil、制限に達した場合PhotoSaveError.limitReached
     func addPhoto(from uiImage: UIImage, isProUser: Bool) -> PhotoSaveError? {
         guard !isSaving else {
+            #if DEBUG
             print("⚠️ 保存処理が進行中のためスキップ")
+            #endif
             return .savingInProgress
         }
 
@@ -125,7 +131,9 @@ final class AppState: ObservableObject {
             let processed = RetroFilter.apply(to: uiImage, date: Date())
 
             guard let data = processed.jpegData(compressionQuality: 0.9) else {
+                #if DEBUG
                 print("❌ JPEG変換に失敗")
+                #endif
                 return .failure(.jpegConversionFailed)
             }
 
@@ -150,7 +158,9 @@ final class AppState: ObservableObject {
         do {
             try data.write(to: url, options: .atomic)
         } catch {
+            #if DEBUG
             print("❌ 画像の保存に失敗: \(error)")
+            #endif
             return .fileWriteFailed
         }
 
@@ -197,7 +207,9 @@ final class AppState: ObservableObject {
                 try fm.removeItem(at: fileURL)
             }
         } catch {
+            #if DEBUG
             print("⚠️ 画像ファイル削除に失敗: \(error)")
+            #endif
         }
 
         // 2. メモリ上の配列から削除

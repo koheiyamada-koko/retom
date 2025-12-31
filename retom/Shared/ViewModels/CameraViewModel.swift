@@ -28,13 +28,17 @@ class CameraViewModel: NSObject, ObservableObject {
             guard let device = AVCaptureDevice.default(.builtInWideAngleCamera,
                                                        for: .video,
                                                        position: .back) else {
+                #if DEBUG
                 print("❌ カメラデバイス取得失敗")
+                #endif
                 return
             }
 
             // 入力
             guard let input = try? AVCaptureDeviceInput(device: device) else {
+                #if DEBUG
                 print("❌ カメラインプット失敗")
+                #endif
                 return
             }
 

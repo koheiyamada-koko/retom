@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		653196BD2EC8662400C39171 /* retom.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = retom.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		653196BD2EC8662400C39171 /* Retom.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Retom.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -40,7 +40,7 @@
 		653196BE2EC8662400C39171 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				653196BD2EC8662400C39171 /* retom.app */,
+				653196BD2EC8662400C39171 /* Retom.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -66,8 +66,8 @@
 			name = retom;
 			packageProductDependencies = (
 			);
-			productName = retom;
-			productReference = 653196BD2EC8662400C39171 /* retom.app */;
+			productName = Retom;
+			productReference = 653196BD2EC8662400C39171 /* Retom.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -270,9 +270,10 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				INFOPLIST_KEY_CFBundleDisplayName = Retom;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.yamadakohei.retom;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = Retom;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -303,9 +304,10 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				INFOPLIST_KEY_CFBundleDisplayName = Retom;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.yamadakohei.retom;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = Retom;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";

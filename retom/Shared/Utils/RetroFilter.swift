@@ -17,11 +17,15 @@ struct RetroFilter {
 
     /// メイン入口：レトロ加工 ＋ 右下に日付スタンプを焼き込んだ UIImage を返す
     static func apply(to uiImage: UIImage, date: Date = Date()) -> UIImage {
+        #if DEBUG
         print("🟡 RetroFilter.apply start")
+        #endif
 
         // 1. CIImage に変換
         guard let inputCI = CIImage(image: uiImage) else {
+            #if DEBUG
             print("❌ CIImage への変換に失敗。UIGraphics だけで日付を描画して返す")
+            #endif
             return addDateStamp(to: uiImage, date: date)
         }
 
@@ -30,7 +34,9 @@ struct RetroFilter {
 
         // 3. CIImage -> UIImage
         guard let cgImage = ciContext.createCGImage(filteredCI, from: filteredCI.extent) else {
+            #if DEBUG
             print("❌ createCGImage 失敗。元画像に日付だけ描画して返す")
+            #endif
             return addDateStamp(to: uiImage, date: date)
         }
 
@@ -42,7 +48,9 @@ struct RetroFilter {
 
         // 4. 日付スタンプ焼き込み
         let stamped = addDateStamp(to: retroUIImage, date: date)
+        #if DEBUG
         print("✅ RetroFilter.apply end")
+        #endif
         return stamped
     }
 
@@ -207,7 +215,9 @@ struct RetroFilter {
             context.restoreGState()
         }
 
+        #if DEBUG
         print("📷 stamped image size = \(stamped.size.width)x\(stamped.size.height)")
+        #endif
         return stamped
     }
 
@@ -344,4 +354,3 @@ struct RetroFilter {
         }
     }
 }
-

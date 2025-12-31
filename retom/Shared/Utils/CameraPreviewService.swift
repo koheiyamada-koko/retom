@@ -50,7 +50,9 @@ final class CameraPreviewService: ObservableObject {
             for: .video,
             position: .back
         ) else {
+            #if DEBUG
             print("⚠️ CameraPreviewService: カメラデバイスが見つかりません")
+            #endif
             return
         }
 
@@ -59,11 +61,15 @@ final class CameraPreviewService: ObservableObject {
             if session.canAddInput(input) {
                 session.addInput(input)
             } else {
+                #if DEBUG
                 print("⚠️ CameraPreviewService: 入力をセッションに追加できません")
+                #endif
                 return
             }
         } catch {
+            #if DEBUG
             print("❌ CameraPreviewService: Camera input error: \(error)")
+            #endif
             return
         }
 
@@ -71,4 +77,3 @@ final class CameraPreviewService: ObservableObject {
         isConfigured = true
     }
 }
-

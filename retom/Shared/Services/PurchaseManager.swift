@@ -131,7 +131,9 @@ final class PurchaseManager: ObservableObject {
                     }
                     await transaction.finish()
                 case .unverified(_, let error):
+                    #if DEBUG
                     print("⚠️ PurchaseManager: トランザクション検証失敗: \(error)")
+                    #endif
                 }
             }
         }
@@ -165,4 +167,3 @@ enum PurchaseError: LocalizedError {
         }
     }
 }
-

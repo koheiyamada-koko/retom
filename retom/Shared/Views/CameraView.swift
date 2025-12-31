@@ -1,6 +1,8 @@
 // File: Shared/Views/CameraView.swift
 import SwiftUI
 import CoreImage
+import Photos
+import UIKit
 
 private enum CameraLayoutConstants {
     static let panelWidth: CGFloat = 320
@@ -35,6 +37,11 @@ struct CameraView: View {
 
     @State private var isShutterPressed = false
     @State private var showFlashOverlay = false
+    @State private var isRequestingPermission = false
+    @State private var isCapturing = false
+    @State private var alertMessage: String?
+    @State private var showSettingsButton = false
+    @Environment(\.scenePhase) private var scenePhase
 
     private var pickerSource: CameraPicker.Source {
         #if targetEnvironment(simulator)
@@ -105,12 +112,10 @@ struct CameraView: View {
         .sheet(isPresented: $showPicker) {
             CameraPicker(from: pickerSource) { uiImage in
                 if let uiImage = uiImage {
-                    if let error = appState.addPhoto(from: uiImage, isProUser: purchaseManager.isProUser) {
-                        if error == .limitReached {
-                            showUpgradeView = true
-                        }
-                    }
+                    let error = appState.addPhoto(from: uiImage, isProUser: purchaseManager.isProUser)
+                    handleSaveResult(error)
                 }
+                isCapturing = false
                 showPicker = false
             }
         }
@@ -128,6 +133,48 @@ struct CameraView: View {
             cameraService.stop()
             #endif
         }
+        .onChange(of: scenePhase) { newValue in
+            if newValue == .background || newValue == .inactive {
+                showPicker = false
+                isCapturing = false
+            }
+        }
+        .alert(isPresented: Binding(
+            get: { alertMessage != nil },
+            set: { newValue in
+                if !newValue { alertMessage = nil }
+            })
+        ) {
+            if showSettingsButton {
+                return Alert(
+                    title: Text("エラー"),
+                    message: Text(alertMessage ?? "問題が発生しました"),
+                    primaryButton: .default(Text("設定を開く"), action: openSettingsIfNeeded),
+                    secondaryButton: .cancel(Text("OK"))
+                )
+            } else {
+                return Alert(
+                    title: Text("エラー"),
+                    message: Text(alertMessage ?? "問題が発生しました"),
+                    dismissButton: .cancel(Text("OK"))
+                )
+            }
+        }
+        #if DEBUG
+        .overlay(alignment: .bottomTrailing) {
+            VStack(alignment: .trailing, spacing: 4) {
+                Text("isSaving: \(appState.isSaving ? "true" : "false")")
+                Text("isCapturing: \(isCapturing ? "true" : "false")")
+                Text("permission: \(currentPermissionLabel)")
+            }
+            .font(.caption2.monospaced())
+            .foregroundStyle(.white)
+            .padding(8)
+            .background(Color.black.opacity(0.5))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .padding(10)
+        }
+        #endif
     }
 
     // MARK: - Header
@@ -273,11 +320,7 @@ struct CameraView: View {
     private var shutterSection: some View {
         VStack(spacing: 16) {
             Button {
-                triggerShutterAnimation()
-
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    showPicker = true
-                }
+                handleShutterTap()
             } label: {
                 ZStack {
                     Circle()
@@ -320,6 +363,7 @@ struct CameraView: View {
                 }
             }
             .buttonStyle(PlainButtonStyle())
+            .disabled(isSavingOrCapturing)
 
             Text("シャッター（フォトライブラリ）")
                 .font(.footnote)
@@ -347,6 +391,114 @@ struct CameraView: View {
                 showFlashOverlay = false
             }
         }
+    }
+
+    private func handleShutterTap() {
+        guard !isSavingOrCapturing else {
+            print("⚠️ シャッター入力を抑制中 isSaving:\\(appState.isSaving) isCapturing:\\(isCapturing)")
+            return
+        }
+
+        isCapturing = true
+        triggerShutterAnimation()
+
+        Task { @MainActor in
+            await requestPhotoAccessAndPresentPicker()
+        }
+    }
+
+    private var isSavingOrCapturing: Bool {
+        appState.isSaving || isCapturing || isRequestingPermission
+    }
+
+    private var currentPermissionLabel: String {
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        switch status {
+        case .authorized: return "authorized"
+        case .limited: return "limited"
+        case .denied: return "denied"
+        case .restricted: return "restricted"
+        case .notDetermined: return "notDetermined"
+        @unknown default: return "unknown"
+        }
+    }
+
+    @MainActor
+    private func requestPhotoAccessAndPresentPicker() async {
+        isRequestingPermission = true
+        defer { isRequestingPermission = false }
+
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        switch status {
+        case .authorized, .limited:
+            presentPicker()
+        case .notDetermined:
+            let newStatus = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+            if newStatus == .authorized || newStatus == .limited {
+                presentPicker()
+            } else {
+                showPermissionAlert(for: newStatus)
+                isCapturing = false
+            }
+        case .denied, .restricted:
+            showPermissionAlert(for: status)
+            isCapturing = false
+        @unknown default:
+            showPermissionAlert(for: status)
+            isCapturing = false
+        }
+    }
+
+    private func presentPicker() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            showPicker = true
+        }
+    }
+
+    private func showPermissionAlert(for status: PHAuthorizationStatus) {
+        let baseMessage = "保存に失敗しました。写真へのアクセス権限を確認してください。"
+        let reason: String
+
+        switch status {
+        case .denied:
+            reason = "ユーザーにより拒否されました。"
+        case .restricted:
+            reason = "機能制限によりアクセスできません。"
+        default:
+            reason = "権限がありません。"
+        }
+
+        alertMessage = baseMessage + "\\n" + reason
+        showSettingsButton = true
+        print("❌ Photos permission issue: \\(status.rawValue) \\(reason)")
+    }
+
+    private func openSettingsIfNeeded() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        if UIApplication.shared.canOpenURL(url) {
+            UIApplication.shared.open(url)
+        }
+    }
+
+    private func handleSaveResult(_ error: PhotoSaveError?) {
+        showSettingsButton = false
+        guard let error = error else {
+            isCapturing = false
+            return
+        }
+
+        switch error {
+        case .limitReached:
+            showUpgradeView = true
+        case .savingInProgress:
+            print("⚠️ 保存が重複しないようスキップ")
+        case .jpegConversionFailed, .fileWriteFailed:
+            alertMessage = "保存に失敗しました。写真へのアクセス権限を確認してください。"
+            showSettingsButton = false
+            print("❌ 保存エラー: \\(error.localizedDescription)")
+        }
+
+        isCapturing = false
     }
 }
 

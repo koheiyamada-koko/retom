@@ -8,6 +8,7 @@ final class AppState: ObservableObject {
 
     // 公開プロパティ：アルバムに表示する写真たち
     @Published var photos: [PhotoItem] = []
+    @Published private(set) var isSaving: Bool = false
 
     // シングルトン（.environmentObject で渡しているやつ）
     static let shared = AppState()
@@ -106,18 +107,37 @@ final class AppState: ObservableObject {
     ///   - isProUser: Pro版購入済みかどうか
     /// - Returns: 成功した場合nil、制限に達した場合PhotoSaveError.limitReached
     func addPhoto(from uiImage: UIImage, isProUser: Bool) -> PhotoSaveError? {
+        guard !isSaving else {
+            print("⚠️ 保存処理が進行中のためスキップ")
+            return .savingInProgress
+        }
+
+        isSaving = true
+        defer { isSaving = false }
+
         // 📌 0. 保存可能かチェック
         guard canSavePhoto(isProUser: isProUser) else {
             return .limitReached
         }
-        
-        // 📌 1. RetroFilter でレトロ加工＋日付焼き込み
-        let processed = RetroFilter.apply(to: uiImage, date: Date())
 
-        // 📌 2. JPEGデータ生成
-        guard let data = processed.jpegData(compressionQuality: 0.9) else {
-            print("❌ JPEG変換に失敗")
-            return .jpegConversionFailed
+        // 📌 1. RetroFilter でレトロ加工＋日付焼き込み
+        let processingResult: Result<Data, PhotoSaveError> = autoreleasepool {
+            let processed = RetroFilter.apply(to: uiImage, date: Date())
+
+            guard let data = processed.jpegData(compressionQuality: 0.9) else {
+                print("❌ JPEG変換に失敗")
+                return .failure(.jpegConversionFailed)
+            }
+
+            return .success(data)
+        }
+
+        let data: Data
+        switch processingResult {
+        case .success(let jpegData):
+            data = jpegData
+        case .failure(let error):
+            return error
         }
 
         // 📌 3. Documentsフォルダ取得
@@ -198,7 +218,8 @@ enum PhotoSaveError: LocalizedError {
     case limitReached
     case jpegConversionFailed
     case fileWriteFailed
-    
+    case savingInProgress
+
     var errorDescription: String? {
         switch self {
         case .limitReached:
@@ -207,7 +228,8 @@ enum PhotoSaveError: LocalizedError {
             return "画像の変換に失敗しました"
         case .fileWriteFailed:
             return "画像の保存に失敗しました"
+        case .savingInProgress:
+            return "保存処理中です。完了までお待ちください"
         }
     }
 }
-

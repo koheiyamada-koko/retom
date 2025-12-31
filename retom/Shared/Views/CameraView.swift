@@ -128,6 +128,7 @@ struct CameraView: View {
         .onAppear {
             setupCameraCallbacks()
             #if !targetEnvironment(simulator)
+            cameraService.refreshAuthorizationStatus()
             checkCameraPermissionAndStart()
             #endif
         }
@@ -145,6 +146,7 @@ struct CameraView: View {
                 #endif
             } else if newValue == .active {
                 #if !targetEnvironment(simulator)
+                cameraService.refreshAuthorizationStatus()
                 checkCameraPermissionAndStart()
                 #endif
             }
@@ -170,6 +172,20 @@ struct CameraView: View {
                 )
             }
         }
+        #if !targetEnvironment(simulator)
+        .onReceive(cameraService.$authorizationStatus) { newStatus in
+            cameraAuthorizationStatus = newStatus
+
+            switch newStatus {
+            case .authorized:
+                cameraService.startSession()
+            case .denied, .restricted:
+                cameraService.stopSession()
+            default:
+                break
+            }
+        }
+        #endif
     }
 
     // MARK: - Header
@@ -445,34 +461,31 @@ struct CameraView: View {
     }
 
     private func checkCameraPermissionAndStart() {
-        let status = AVCaptureDevice.authorizationStatus(for: .video)
-        cameraAuthorizationStatus = status
+        cameraAuthorizationStatus = cameraService.authorizationStatus
 
-        switch status {
+        switch cameraAuthorizationStatus {
         case .authorized:
             cameraService.startSession()
         case .notDetermined:
             requestCameraPermission()
         case .denied, .restricted:
-            showCameraPermissionAlert(for: status)
+            showCameraPermissionAlert(for: cameraAuthorizationStatus)
         @unknown default:
-            showCameraPermissionAlert(for: status)
+            showCameraPermissionAlert(for: cameraAuthorizationStatus)
         }
     }
 
     private func requestCameraPermission() {
         isRequestingPermission = true
-        AVCaptureDevice.requestAccess(for: .video) { granted in
-            DispatchQueue.main.async {
-                self.isRequestingPermission = false
-                self.cameraAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
+        cameraService.requestAccess { granted in
+            self.isRequestingPermission = false
+            self.cameraAuthorizationStatus = self.cameraService.authorizationStatus
 
-                if granted {
-                    self.cameraService.startSession()
-                } else {
-                    self.isCapturing = false
-                    self.showCameraPermissionAlert(for: self.cameraAuthorizationStatus)
-                }
+            if granted {
+                self.cameraService.startSession()
+            } else {
+                self.isCapturing = false
+                self.showCameraPermissionAlert(for: self.cameraAuthorizationStatus)
             }
         }
     }
@@ -500,7 +513,12 @@ struct CameraView: View {
 
     private func handleCameraError(_ error: CameraServiceError) {
         alertMessage = error.errorDescription
-        showSettingsButton = false
+        switch error {
+        case .notAuthorized:
+            showSettingsButton = true
+        default:
+            showSettingsButton = false
+        }
         isCapturing = false
     }
 

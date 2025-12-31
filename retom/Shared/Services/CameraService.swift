@@ -12,16 +12,21 @@ final class CameraService: NSObject, ObservableObject {
     private let sessionQueue = DispatchQueue(label: "camera.session.queue")
     private let photoOutput = AVCapturePhotoOutput()
 
+    private var isConfigured = false
+
     /// 撮影完了時に UIImage を受け取るためのコールバック
     var onPhotoCapture: ((UIImage) -> Void)?
+    /// 何らかのエラーが発生したときに通知するコールバック
+    var onError: ((CameraServiceError) -> Void)?
 
     override init() {
         super.init()
-        configureSession()
     }
 
     /// カメラの入出力をセットアップ
-    private func configureSession() {
+    private func configureSessionIfNeeded() {
+        guard !isConfigured else { return }
+
         session.beginConfiguration()
         session.sessionPreset = .photo
 
@@ -36,6 +41,9 @@ final class CameraService: NSObject, ObservableObject {
             print("❌ カメラインプットを追加できません")
             #endif
             session.commitConfiguration()
+            DispatchQueue.main.async {
+                self.onError?(.deviceUnavailable)
+            }
             return
         }
         session.addInput(input)
@@ -46,18 +54,24 @@ final class CameraService: NSObject, ObservableObject {
             print("❌ PhotoOutput を追加できません")
             #endif
             session.commitConfiguration()
+            DispatchQueue.main.async {
+                self.onError?(.outputUnavailable)
+            }
             return
         }
         session.addOutput(photoOutput)
         photoOutput.isHighResolutionCaptureEnabled = true
 
         session.commitConfiguration()
+        isConfigured = true
     }
 
     // MARK: - セッション制御
 
     func startSession() {
         sessionQueue.async {
+            self.configureSessionIfNeeded()
+
             if !self.session.isRunning {
                 self.session.startRunning()
             }
@@ -75,14 +89,25 @@ final class CameraService: NSObject, ObservableObject {
     // MARK: - 撮影
 
     func capturePhoto() {
-        let settings = AVCapturePhotoSettings()
+        sessionQueue.async {
+            self.configureSessionIfNeeded()
 
-        // フラッシュ自動（対応していれば）
-        if photoOutput.supportedFlashModes.contains(.auto) {
-            settings.flashMode = .auto
+            guard self.isConfigured else {
+                DispatchQueue.main.async {
+                    self.onError?(.notConfigured)
+                }
+                return
+            }
+
+            let settings = AVCapturePhotoSettings()
+
+            // フラッシュ自動（対応していれば）
+            if self.photoOutput.supportedFlashModes.contains(.auto) {
+                settings.flashMode = .auto
+            }
+
+            self.photoOutput.capturePhoto(with: settings, delegate: self)
         }
-
-        photoOutput.capturePhoto(with: settings, delegate: self)
     }
 }
 
@@ -98,6 +123,9 @@ extension CameraService: AVCapturePhotoCaptureDelegate {
             #if DEBUG
             print("❌ 写真撮影に失敗: \(error)")
             #endif
+            DispatchQueue.main.async {
+                self.onError?(.captureFailed(error))
+            }
             return
         }
 
@@ -106,11 +134,39 @@ extension CameraService: AVCapturePhotoCaptureDelegate {
             #if DEBUG
             print("❌ 画像データを取得できません")
             #endif
+            DispatchQueue.main.async {
+                self.onError?(.imageProcessingFailed)
+            }
             return
         }
 
         DispatchQueue.main.async {
             self.onPhotoCapture?(image)
+        }
+    }
+}
+
+// MARK: - CameraServiceError
+
+enum CameraServiceError: LocalizedError {
+    case deviceUnavailable
+    case outputUnavailable
+    case notConfigured
+    case captureFailed(Error)
+    case imageProcessingFailed
+
+    var errorDescription: String? {
+        switch self {
+        case .deviceUnavailable:
+            return "カメラデバイスを初期化できませんでした。"
+        case .outputUnavailable:
+            return "撮影出力の初期化に失敗しました。"
+        case .notConfigured:
+            return "カメラの準備が完了していません。"
+        case .captureFailed(let error):
+            return "撮影に失敗しました: \(error.localizedDescription)"
+        case .imageProcessingFailed:
+            return "撮影した画像を取得できませんでした。"
         }
     }
 }

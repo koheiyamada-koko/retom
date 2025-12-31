@@ -20,24 +20,20 @@ struct UpgradeView: View {
                     .foregroundColor(.blue)
                 
                 // タイトル
-                Text("無料版の撮影上限に達しました")
+                Text("無料版の保存上限に達しました")
                     .font(.title2.bold())
                     .multilineTextAlignment(.center)
                 
                 // 説明文
                 VStack(spacing: 12) {
-                    Text("無料版では50枚まで撮影・保存できます。")
-                    Text("続けて使うにはPro版（買い切り）へのアップグレードが必要です。")
+                    Text("無料版は50枚まで保存できます。")
+                    Text("これ以降はPro版（買い切り）にアップグレードしてください。")
+                    Text("購入済みの方は「購入を復元」を選んでください。")
                 }
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
-                
-                // 価格表示（オプション）
-                Text("Pro版：¥300（税込・買い切り）")
-                    .font(.headline)
-                    .foregroundColor(.blue)
                 
                 Spacer()
                 
@@ -126,4 +122,3 @@ struct UpgradeView: View {
         }
     }
 }
-

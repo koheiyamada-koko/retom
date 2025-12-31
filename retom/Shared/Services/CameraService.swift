@@ -233,17 +233,17 @@ enum CameraServiceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .deviceUnavailable:
-            return "カメラデバイスを初期化できませんでした。"
+            return "カメラを準備できませんでした。アプリを再起動してください。"
         case .inputUnavailable:
-            return "カメラインプットの初期化に失敗しました。"
+            return "カメラの準備に失敗しました。もう一度お試しください。"
         case .outputUnavailable:
-            return "撮影出力の初期化に失敗しました。"
+            return "撮影の準備に失敗しました。もう一度お試しください。"
         case .notAuthorized:
-            return "カメラの権限がありません。"
+            return "カメラへのアクセスが許可されていません。"
         case .notConfigured:
             return "カメラの準備が完了していません。"
-        case .captureFailed(let error):
-            return "撮影に失敗しました: \(error.localizedDescription)"
+        case .captureFailed:
+            return "撮影に失敗しました。もう一度お試しください。"
         case .imageProcessingFailed:
             return "撮影した画像を取得できませんでした。"
         }

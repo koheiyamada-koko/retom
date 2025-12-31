@@ -235,13 +235,13 @@ enum PhotoSaveError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .limitReached:
-            return "無料版の撮影上限（50枚）に達しました"
+            return "無料版は50枚までです。Pro版にアップグレードすると無制限になります。"
         case .jpegConversionFailed:
-            return "画像の変換に失敗しました"
+            return "画像を変換できませんでした。"
         case .fileWriteFailed:
-            return "画像の保存に失敗しました"
+            return "画像を保存できませんでした。"
         case .savingInProgress:
-            return "保存処理中です。完了までお待ちください"
+            return "保存処理中です。少し時間をおいてお試しください。"
         }
     }
 }

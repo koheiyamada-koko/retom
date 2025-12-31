@@ -78,11 +78,11 @@ final class AppState: ObservableObject {
     }
     
     /// 保存可能かどうかをチェック
-    /// - Parameter isProUser: Pro版購入済みかどうか
+    /// - Parameter isProPurchased: Pro版購入済みかどうか
     /// - Returns: 保存可能な場合true
-    func canSavePhoto(isProUser: Bool) -> Bool {
+    func canSavePhoto(isProPurchased: Bool) -> Bool {
         // Pro版ユーザーは無制限
-        if isProUser {
+        if isProPurchased {
             return true
         }
         // 無料版は50枚まで
@@ -108,9 +108,9 @@ final class AppState: ObservableObject {
     /// 写真を追加（レトロ加工 + 日付スタンプ付き）
     /// - Parameters:
     ///   - uiImage: 追加する画像
-    ///   - isProUser: Pro版購入済みかどうか
+    ///   - isProPurchased: Pro版購入済みかどうか
     /// - Returns: 成功した場合nil、制限に達した場合PhotoSaveError.limitReached
-    func addPhoto(from uiImage: UIImage, isProUser: Bool) -> PhotoSaveError? {
+    func addPhoto(from uiImage: UIImage, isProPurchased: Bool) -> PhotoSaveError? {
         guard !isSaving else {
             #if DEBUG
             print("⚠️ 保存処理が進行中のためスキップ")
@@ -122,7 +122,7 @@ final class AppState: ObservableObject {
         defer { isSaving = false }
 
         // 📌 0. 保存可能かチェック
-        guard canSavePhoto(isProUser: isProUser) else {
+        guard canSavePhoto(isProPurchased: isProPurchased) else {
             return .limitReached
         }
 
@@ -184,14 +184,14 @@ final class AppState: ObservableObject {
     // MARK: - おまけ：ダミー写真追加（テスト用）
 
     /// グレーのダミー画像を1枚追加したいとき用（テスト用）
-    func addDummyPhoto(isProUser: Bool) {
+    func addDummyPhoto(isProPurchased: Bool) {
         let size = CGSize(width: 800, height: 600)
         let renderer = UIGraphicsImageRenderer(size: size)
         let image = renderer.image { ctx in
             UIColor.systemGray4.setFill()
             ctx.fill(CGRect(origin: .zero, size: size))
         }
-        _ = addPhoto(from: image, isProUser: isProUser)
+        _ = addPhoto(from: image, isProPurchased: isProPurchased)
     }
     
     //------------------------------------

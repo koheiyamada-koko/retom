@@ -32,7 +32,9 @@ final class CameraService: NSObject, ObservableObject {
               let input = try? AVCaptureDeviceInput(device: device),
               session.canAddInput(input)
         else {
+            #if DEBUG
             print("❌ カメラインプットを追加できません")
+            #endif
             session.commitConfiguration()
             return
         }
@@ -40,7 +42,9 @@ final class CameraService: NSObject, ObservableObject {
 
         // 出力（静止画）
         guard session.canAddOutput(photoOutput) else {
+            #if DEBUG
             print("❌ PhotoOutput を追加できません")
+            #endif
             session.commitConfiguration()
             return
         }
@@ -91,13 +95,17 @@ extension CameraService: AVCapturePhotoCaptureDelegate {
                      error: Error?) {
 
         if let error = error {
+            #if DEBUG
             print("❌ 写真撮影に失敗: \(error)")
+            #endif
             return
         }
 
         guard let data = photo.fileDataRepresentation(),
               let image = UIImage(data: data) else {
+            #if DEBUG
             print("❌ 画像データを取得できません")
+            #endif
             return
         }
 
@@ -106,4 +114,3 @@ extension CameraService: AVCapturePhotoCaptureDelegate {
         }
     }
 }
-

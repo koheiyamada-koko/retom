@@ -380,7 +380,9 @@ struct CameraView: View {
 
     private func handleShutterTap() {
         guard !isSavingOrCapturing else {
+            #if DEBUG
             print("⚠️ シャッター入力を抑制中 isSaving:\\(appState.isSaving) isCapturing:\\(isCapturing)")
+            #endif
             return
         }
 
@@ -455,7 +457,9 @@ struct CameraView: View {
 
         alertMessage = baseMessage + "\\n" + reason
         showSettingsButton = true
+        #if DEBUG
         print("❌ Photos permission issue: \\(status.rawValue) \\(reason)")
+        #endif
     }
 
     private func openSettingsIfNeeded() {
@@ -476,11 +480,15 @@ struct CameraView: View {
         case .limitReached:
             showUpgradeView = true
         case .savingInProgress:
+            #if DEBUG
             print("⚠️ 保存が重複しないようスキップ")
+            #endif
         case .jpegConversionFailed, .fileWriteFailed:
             alertMessage = "保存に失敗しました。写真へのアクセス権限を確認してください。"
             showSettingsButton = false
+            #if DEBUG
             print("❌ 保存エラー: \\(error.localizedDescription)")
+            #endif
         }
 
         isCapturing = false

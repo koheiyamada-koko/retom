@@ -110,10 +110,11 @@ struct CameraView: View {
     // MARK: - Header
 
     private var headerSection: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             Text("カメラ")
                 .font(.largeTitle.bold())
                 .foregroundColor(Color(red: 0.3, green: 0.25, blue: 0.2))
+                .multilineTextAlignment(.center)
 
             HStack(spacing: 8) {
                 Image(systemName: "camera.fill")
@@ -121,7 +122,9 @@ struct CameraView: View {
                 Text("retom フィルムカメラ")
                     .font(.title3.bold())
                     .foregroundColor(Color(red: 0.4, green: 0.35, blue: 0.3))
+                    .multilineTextAlignment(.center)
             }
+            .frame(maxWidth: .infinity, alignment: .center)
 
             VStack(spacing: 4) {
                 Text("保存されている写真：\(appState.photos.count)枚")
@@ -137,13 +140,16 @@ struct CameraView: View {
                             ? Color(red: 0.7, green: 0.3, blue: 0.2)
                             : Color(red: 0.45, green: 0.4, blue: 0.35)
                         )
+                        .multilineTextAlignment(.center)
                 } else {
                     Text("Pro版：無制限")
                         .font(.caption)
                         .foregroundColor(Color(red: 0.4, green: 0.5, blue: 0.6))
+                        .multilineTextAlignment(.center)
                 }
             }
-            .padding(.horizontal, 16)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .background(
                 RoundedRectangle(cornerRadius: 16)
@@ -151,6 +157,7 @@ struct CameraView: View {
                     .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
             )
         }
+        .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity, alignment: .center)
     }
 

@@ -57,15 +57,15 @@ struct CameraView: View {
             VStack(spacing: 20) {
                 headerSection
                     .frame(maxWidth: 320)
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, alignment: .center)
 
                 previewSection
                     .frame(maxWidth: 320)
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, alignment: .center)
 
                 shutterSection
                     .frame(maxWidth: 320)
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.bottom, 40)
             }
             .padding(.horizontal)
@@ -309,4 +309,3 @@ struct CameraView: View {
         }
     }
 }
-

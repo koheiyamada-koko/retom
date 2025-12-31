@@ -32,7 +32,7 @@ struct CameraView: View {
     @EnvironmentObject var appState: AppState
     @EnvironmentObject var purchaseManager: PurchaseManager
     @State private var showPicker = false
-    @State private var showUpgradeView = false
+    @State private var showUpgradeAlert = false
 
     @StateObject private var cameraService = CameraService()
 
@@ -114,16 +114,12 @@ struct CameraView: View {
         .sheet(isPresented: $showPicker) {
             CameraPicker(from: pickerSource) { uiImage in
                 if let uiImage = uiImage {
-                    let error = appState.addPhoto(from: uiImage, isProUser: purchaseManager.isProUser)
+                    let error = appState.addPhoto(from: uiImage, isProPurchased: purchaseManager.isProPurchased)
                     handleSaveResult(error)
                 }
                 isCapturing = false
                 showPicker = false
             }
-        }
-        .sheet(isPresented: $showUpgradeView) {
-            UpgradeView()
-                .environmentObject(purchaseManager)
         }
         .onAppear {
             setupCameraCallbacks()
@@ -172,6 +168,21 @@ struct CameraView: View {
                 )
             }
         }
+        .alert("Pro版にアップグレード", isPresented: $showUpgradeAlert) {
+            Button("Pro版を購入") {
+                startUpgradePurchase()
+            }
+            .disabled(purchaseManager.isLoading)
+            
+            Button("購入を復元") {
+                startRestorePurchase()
+            }
+            .disabled(purchaseManager.isLoading)
+            
+            Button("閉じる", role: .cancel) { }
+        } message: {
+            Text("Pro版にアップグレードすると、撮影枚数が無制限になります")
+        }
         #if !targetEnvironment(simulator)
         .onReceive(cameraService.$authorizationStatus) { newStatus in
             cameraAuthorizationStatus = newStatus
@@ -216,14 +227,14 @@ struct CameraView: View {
                     .font(.subheadline)
                     .foregroundColor(Color(red: 0.35, green: 0.3, blue: 0.25))
 
-                if !purchaseManager.isProUser {
+                if !purchaseManager.isProPurchased {
                     let remaining = max(0, 50 - appState.totalSavedCount)
                     Text("残り\(remaining)枚（無料版）")
                         .font(.caption)
                         .foregroundColor(
                             remaining <= 5
-                            ? Color(red: 0.7, green: 0.3, blue: 0.2)
-                            : Color(red: 0.45, green: 0.4, blue: 0.35)
+                                ? Color(red: 0.7, green: 0.3, blue: 0.2)
+                                : Color(red: 0.45, green: 0.4, blue: 0.35)
                         )
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
@@ -429,6 +440,11 @@ struct CameraView: View {
             return
         }
 
+        if !appState.canSavePhoto(isProPurchased: purchaseManager.isProPurchased) {
+            showUpgradeAlert = true
+            return
+        }
+
         isCapturing = true
         triggerShutterAnimation()
 
@@ -507,7 +523,7 @@ struct CameraView: View {
     }
 
     private func handleCapturedPhoto(_ image: UIImage) {
-        let error = appState.addPhoto(from: image, isProUser: purchaseManager.isProUser)
+        let error = appState.addPhoto(from: image, isProPurchased: purchaseManager.isProPurchased)
         handleSaveResult(error)
     }
 
@@ -614,6 +630,44 @@ struct CameraView: View {
             UIApplication.shared.open(url)
         }
     }
+    
+    private func startUpgradePurchase() {
+        guard !purchaseManager.isLoading else { return }
+        Task {
+            await purchasePro()
+        }
+    }
+    
+    private func startRestorePurchase() {
+        guard !purchaseManager.isLoading else { return }
+        Task {
+            await restorePurchase()
+        }
+    }
+    
+    @MainActor
+    private func purchasePro() async {
+        do {
+            try await purchaseManager.purchasePro()
+            showUpgradeAlert = false
+            isCapturing = false
+        } catch {
+            alertMessage = error.localizedDescription
+            showSettingsButton = false
+        }
+    }
+    
+    @MainActor
+    private func restorePurchase() async {
+        do {
+            try await purchaseManager.restorePurchase()
+            showUpgradeAlert = false
+            isCapturing = false
+        } catch {
+            alertMessage = error.localizedDescription
+            showSettingsButton = false
+        }
+    }
 
     private func handleSaveResult(_ error: PhotoSaveError?) {
         showSettingsButton = false
@@ -624,7 +678,7 @@ struct CameraView: View {
 
         switch error {
         case .limitReached:
-            showUpgradeView = true
+            showUpgradeAlert = true
         case .savingInProgress:
             #if DEBUG
             print("⚠️ 保存が重複しないようスキップ")
@@ -657,7 +711,7 @@ struct CameraView_Previews: PreviewProvider {
 
     private static let previewPurchaseManager: PurchaseManager = {
         let manager = PurchaseManager()
-        manager.isProUser = false
+        manager.isProPurchased = false
         return manager
     }()
 

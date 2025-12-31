@@ -9,7 +9,7 @@ final class PurchaseManager: ObservableObject {
     // MARK: - Published Properties
     
     /// Pro版を購入済みかどうか
-    @Published var isProUser: Bool = false
+    @Published var isProPurchased: Bool = false
     
     /// 購入処理中かどうか
     @Published var isLoading: Bool = false
@@ -17,7 +17,7 @@ final class PurchaseManager: ObservableObject {
     // MARK: - Private Properties
     
     /// プロダクトID（App Store Connectで設定するID）
-    private let productID = "retom.pro"
+    private let productID = "retom_pro_unlimited"
     
     /// 購入済みトランザクションを監視するタスク
     private var updateListenerTask: Task<Void, Never>?
@@ -49,13 +49,13 @@ final class PurchaseManager: ObservableObject {
         for await result in Transaction.currentEntitlements {
             if case .verified(let transaction) = result {
                 if transaction.productID == productID {
-                    isProUser = true
+                    isProPurchased = true
                     return
                 }
             }
         }
         
-        isProUser = false
+        isProPurchased = false
     }
     
     /// Pro版を購入
@@ -78,7 +78,7 @@ final class PurchaseManager: ObservableObject {
             case .verified(let transaction):
                 // 購入成功
                 await transaction.finish()
-                isProUser = true
+                isProPurchased = true
             case .unverified(_, let error):
                 throw PurchaseError.verificationFailed(error)
             }
@@ -108,7 +108,7 @@ final class PurchaseManager: ObservableObject {
         }
         
         if foundPro {
-            isProUser = true
+            isProPurchased = true
         } else {
             throw PurchaseError.noRestorablePurchases
         }
@@ -126,7 +126,7 @@ final class PurchaseManager: ObservableObject {
                 case .verified(let transaction):
                     if transaction.productID == self.productID {
                         await MainActor.run {
-                            self.isProUser = true
+                            self.isProPurchased = true
                         }
                     }
                     await transaction.finish()

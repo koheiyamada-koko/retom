@@ -5,13 +5,13 @@ import AVFoundation
 /// AVCaptureSession を使ってカメラ映像を表示する SwiftUI ラッパー
 struct CameraPreviewView: UIViewRepresentable {
 
-    @ObservedObject var service: CameraPreviewService
+    let session: AVCaptureSession
 
     func makeUIView(context: Context) -> UIView {
         let view = UIView()
         view.backgroundColor = .black
 
-        let previewLayer = AVCaptureVideoPreviewLayer(session: service.session)
+        let previewLayer = AVCaptureVideoPreviewLayer(session: session)
         previewLayer.videoGravity = .resizeAspectFill
         previewLayer.frame = view.bounds
 
@@ -34,4 +34,3 @@ struct CameraPreviewView: UIViewRepresentable {
         var previewLayer: AVCaptureVideoPreviewLayer?
     }
 }
-

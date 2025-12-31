@@ -3,6 +3,7 @@ import SwiftUI
 import CoreImage
 import Photos
 import UIKit
+import AVFoundation
 
 private enum CameraLayoutConstants {
     static let panelWidth: CGFloat = 320
@@ -33,7 +34,7 @@ struct CameraView: View {
     @State private var showPicker = false
     @State private var showUpgradeView = false
 
-    @StateObject private var cameraService = CameraPreviewService()
+    @StateObject private var cameraService = CameraService()
 
     @State private var isShutterPressed = false
     @State private var showFlashOverlay = false
@@ -41,6 +42,7 @@ struct CameraView: View {
     @State private var isCapturing = false
     @State private var alertMessage: String?
     @State private var showSettingsButton = false
+    @State private var cameraAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
     @Environment(\.scenePhase) private var scenePhase
 
     private var pickerSource: CameraPicker.Source {
@@ -124,19 +126,27 @@ struct CameraView: View {
                 .environmentObject(purchaseManager)
         }
         .onAppear {
+            setupCameraCallbacks()
             #if !targetEnvironment(simulator)
-            cameraService.start()
+            checkCameraPermissionAndStart()
             #endif
         }
         .onDisappear {
             #if !targetEnvironment(simulator)
-            cameraService.stop()
+            cameraService.stopSession()
             #endif
         }
         .onChange(of: scenePhase) { newValue in
             if newValue == .background || newValue == .inactive {
                 showPicker = false
                 isCapturing = false
+                #if !targetEnvironment(simulator)
+                cameraService.stopSession()
+                #endif
+            } else if newValue == .active {
+                #if !targetEnvironment(simulator)
+                checkCameraPermissionAndStart()
+                #endif
             }
         }
         .alert(isPresented: Binding(
@@ -273,10 +283,27 @@ struct CameraView: View {
             .clipShape(RoundedRectangle(cornerRadius: 20))
             .padding(4)
             #else
-            CameraPreviewView(service: cameraService)
+            if cameraAuthorizationStatus == .authorized {
+                CameraPreviewView(session: cameraService.session)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .clipped()
+                    .padding(4)
+            } else {
+                VStack {
+                    Text("カメラへのアクセスがありません")
+                        .font(.callout)
+                        .foregroundColor(Color.white.opacity(0.6))
+                        .multilineTextAlignment(.center)
+                    Button("設定を開く") {
+                        openSettingsIfNeeded()
+                    }
+                    .padding(.top, 8)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black.opacity(0.95))
                 .clipShape(RoundedRectangle(cornerRadius: 20))
-                .clipped()
                 .padding(4)
+            }
             #endif
 
             VStack {
@@ -350,7 +377,7 @@ struct CameraView: View {
             .buttonStyle(PlainButtonStyle())
             .disabled(isSavingOrCapturing)
 
-            Text("シャッター（フォトライブラリ）")
+            Text(shutterLabel)
                 .font(.footnote)
                 .foregroundColor(Color(red: 0.5, green: 0.45, blue: 0.4))
                 .lineLimit(1)
@@ -389,13 +416,114 @@ struct CameraView: View {
         isCapturing = true
         triggerShutterAnimation()
 
+        #if targetEnvironment(simulator)
         Task { @MainActor in
             await requestPhotoAccessAndPresentPicker()
         }
+        #else
+        guard cameraAuthorizationStatus == .authorized else {
+            handleCameraPermissionForCapture()
+            return
+        }
+
+        cameraService.startSession()
+        cameraService.capturePhoto()
+        #endif
     }
 
     private var isSavingOrCapturing: Bool {
         appState.isSaving || isCapturing || isRequestingPermission
+    }
+
+    private func setupCameraCallbacks() {
+        cameraService.onPhotoCapture = { image in
+            handleCapturedPhoto(image)
+        }
+        cameraService.onError = { error in
+            handleCameraError(error)
+        }
+    }
+
+    private func checkCameraPermissionAndStart() {
+        let status = AVCaptureDevice.authorizationStatus(for: .video)
+        cameraAuthorizationStatus = status
+
+        switch status {
+        case .authorized:
+            cameraService.startSession()
+        case .notDetermined:
+            requestCameraPermission()
+        case .denied, .restricted:
+            showCameraPermissionAlert(for: status)
+        @unknown default:
+            showCameraPermissionAlert(for: status)
+        }
+    }
+
+    private func requestCameraPermission() {
+        isRequestingPermission = true
+        AVCaptureDevice.requestAccess(for: .video) { granted in
+            DispatchQueue.main.async {
+                self.isRequestingPermission = false
+                self.cameraAuthorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
+
+                if granted {
+                    self.cameraService.startSession()
+                } else {
+                    self.isCapturing = false
+                    self.showCameraPermissionAlert(for: self.cameraAuthorizationStatus)
+                }
+            }
+        }
+    }
+
+    private func handleCameraPermissionForCapture() {
+        switch cameraAuthorizationStatus {
+        case .authorized:
+            cameraService.startSession()
+            cameraService.capturePhoto()
+        case .notDetermined:
+            requestCameraPermission()
+        case .denied, .restricted:
+            isCapturing = false
+            showCameraPermissionAlert(for: cameraAuthorizationStatus)
+        @unknown default:
+            isCapturing = false
+            showCameraPermissionAlert(for: cameraAuthorizationStatus)
+        }
+    }
+
+    private func handleCapturedPhoto(_ image: UIImage) {
+        let error = appState.addPhoto(from: image, isProUser: purchaseManager.isProUser)
+        handleSaveResult(error)
+    }
+
+    private func handleCameraError(_ error: CameraServiceError) {
+        alertMessage = error.errorDescription
+        showSettingsButton = false
+        isCapturing = false
+    }
+
+    private func showCameraPermissionAlert(for status: AVAuthorizationStatus) {
+        let reason: String
+        switch status {
+        case .denied:
+            reason = "ユーザーにより拒否されました。"
+        case .restricted:
+            reason = "機能制限によりアクセスできません。"
+        default:
+            reason = "カメラへのアクセス権限がありません。"
+        }
+        alertMessage = "カメラにアクセスできないため撮影できません。\\n" + reason
+        showSettingsButton = true
+    }
+
+    private var shutterLabel: String {
+        #if targetEnvironment(simulator)
+        return "シャッター（フォトライブラリ）"
+        #else
+        return "シャッター"
+        #endif
     }
 
     private var currentPermissionLabel: String {

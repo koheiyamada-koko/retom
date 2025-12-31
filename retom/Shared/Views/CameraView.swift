@@ -316,3 +316,47 @@ struct CameraView: View {
         }
     }
 }
+
+#if DEBUG
+struct CameraView_Previews: PreviewProvider {
+    private static let previewDevices = [
+        "iPhone 13",
+        "iPhone 15 Pro",
+        "iPhone 16 Pro Max"
+    ]
+
+    private static let previewAppState: AppState = {
+        let appState = AppState.shared
+        appState.photos = []
+        return appState
+    }()
+
+    private static let previewPurchaseManager: PurchaseManager = {
+        let manager = PurchaseManager()
+        manager.isProUser = false
+        return manager
+    }()
+
+    static var previews: some View {
+        Group {
+            ForEach(previewDevices, id: \.self) { device in
+                CameraView()
+                    .environmentObject(previewAppState)
+                    .environmentObject(previewPurchaseManager)
+                    .previewDisplayName("\(device) • Light")
+                    .previewDevice(PreviewDevice(rawValue: device))
+                    .preferredColorScheme(.light)
+            }
+
+            ForEach(previewDevices, id: \.self) { device in
+                CameraView()
+                    .environmentObject(previewAppState)
+                    .environmentObject(previewPurchaseManager)
+                    .previewDisplayName("\(device) • Dark")
+                    .previewDevice(PreviewDevice(rawValue: device))
+                    .preferredColorScheme(.dark)
+            }
+        }
+    }
+}
+#endif

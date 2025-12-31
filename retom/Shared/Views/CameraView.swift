@@ -160,21 +160,6 @@ struct CameraView: View {
                 )
             }
         }
-        #if DEBUG
-        .overlay(alignment: .bottomTrailing) {
-            VStack(alignment: .trailing, spacing: 4) {
-                Text("isSaving: \(appState.isSaving ? "true" : "false")")
-                Text("isCapturing: \(isCapturing ? "true" : "false")")
-                Text("permission: \(currentPermissionLabel)")
-            }
-            .font(.caption2.monospaced())
-            .foregroundStyle(.white)
-            .padding(8)
-            .background(Color.black.opacity(0.5))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            .padding(10)
-        }
-        #endif
     }
 
     // MARK: - Header

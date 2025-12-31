@@ -8,6 +8,8 @@ final class CameraService: NSObject, ObservableObject {
 
     /// カメラプレビューに使うセッション
     let session = AVCaptureSession()
+    /// カメラ権限の状態
+    @Published private(set) var authorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
 
     private let sessionQueue = DispatchQueue(label: "camera.session.queue")
     private let photoOutput = AVCapturePhotoOutput()
@@ -23,37 +25,80 @@ final class CameraService: NSObject, ObservableObject {
         super.init()
     }
 
+    // MARK: - 権限
+
+    func refreshAuthorizationStatus() {
+        let status = AVCaptureDevice.authorizationStatus(for: .video)
+
+        if Thread.isMainThread {
+            authorizationStatus = status
+        } else {
+            DispatchQueue.main.async {
+                self.authorizationStatus = status
+            }
+        }
+    }
+
+    func requestAccess(completion: @escaping (Bool) -> Void) {
+        AVCaptureDevice.requestAccess(for: .video) { granted in
+            DispatchQueue.main.async {
+                self.authorizationStatus = AVCaptureDevice.authorizationStatus(for: .video)
+                completion(granted)
+            }
+        }
+    }
+
     /// カメラの入出力をセットアップ
     private func configureSessionIfNeeded() {
         guard !isConfigured else { return }
 
         session.beginConfiguration()
+        defer {
+            session.commitConfiguration()
+        }
+
         session.sessionPreset = .photo
 
         // 入力（背面カメラ）
         guard let device = AVCaptureDevice.default(.builtInWideAngleCamera,
                                                    for: .video,
-                                                   position: .back),
-              let input = try? AVCaptureDeviceInput(device: device),
-              session.canAddInput(input)
-        else {
+                                                   position: .back) else {
             #if DEBUG
-            print("❌ カメラインプットを追加できません")
+            print("❌ カメラデバイスを取得できません")
             #endif
-            session.commitConfiguration()
             DispatchQueue.main.async {
                 self.onError?(.deviceUnavailable)
             }
             return
         }
-        session.addInput(input)
+
+        do {
+            let input = try AVCaptureDeviceInput(device: device)
+            guard session.canAddInput(input) else {
+                #if DEBUG
+                print("❌ カメラインプットを追加できません")
+                #endif
+                DispatchQueue.main.async {
+                    self.onError?(.inputUnavailable)
+                }
+                return
+            }
+            session.addInput(input)
+        } catch {
+            #if DEBUG
+            print("❌ カメラインプット作成に失敗: \(error)")
+            #endif
+            DispatchQueue.main.async {
+                self.onError?(.inputUnavailable)
+            }
+            return
+        }
 
         // 出力（静止画）
         guard session.canAddOutput(photoOutput) else {
             #if DEBUG
             print("❌ PhotoOutput を追加できません")
             #endif
-            session.commitConfiguration()
             DispatchQueue.main.async {
                 self.onError?(.outputUnavailable)
             }
@@ -61,8 +106,8 @@ final class CameraService: NSObject, ObservableObject {
         }
         session.addOutput(photoOutput)
         photoOutput.isHighResolutionCaptureEnabled = true
+        photoOutput.maxPhotoQualityPrioritization = .quality
 
-        session.commitConfiguration()
         isConfigured = true
     }
 
@@ -70,10 +115,26 @@ final class CameraService: NSObject, ObservableObject {
 
     func startSession() {
         sessionQueue.async {
+            guard self.authorizationStatus == .authorized else {
+                #if DEBUG
+                print("⚠️ カメラ権限が許可されていないためセッションを開始できません")
+                #endif
+                return
+            }
+
             self.configureSessionIfNeeded()
 
             if !self.session.isRunning {
                 self.session.startRunning()
+                DispatchQueue.main.async {
+                    #if DEBUG
+                    if self.session.isRunning {
+                        print("✅ カメラセッションを開始しました")
+                    } else {
+                        print("❌ カメラセッションの開始に失敗しました")
+                    }
+                    #endif
+                }
             }
         }
     }
@@ -82,6 +143,11 @@ final class CameraService: NSObject, ObservableObject {
         sessionQueue.async {
             if self.session.isRunning {
                 self.session.stopRunning()
+                DispatchQueue.main.async {
+                    #if DEBUG
+                    print("ℹ️ カメラセッションを停止しました")
+                    #endif
+                }
             }
         }
     }
@@ -90,6 +156,13 @@ final class CameraService: NSObject, ObservableObject {
 
     func capturePhoto() {
         sessionQueue.async {
+            guard self.authorizationStatus == .authorized else {
+                DispatchQueue.main.async {
+                    self.onError?(.notAuthorized)
+                }
+                return
+            }
+
             self.configureSessionIfNeeded()
 
             guard self.isConfigured else {
@@ -150,7 +223,9 @@ extension CameraService: AVCapturePhotoCaptureDelegate {
 
 enum CameraServiceError: LocalizedError {
     case deviceUnavailable
+    case inputUnavailable
     case outputUnavailable
+    case notAuthorized
     case notConfigured
     case captureFailed(Error)
     case imageProcessingFailed
@@ -159,8 +234,12 @@ enum CameraServiceError: LocalizedError {
         switch self {
         case .deviceUnavailable:
             return "カメラデバイスを初期化できませんでした。"
+        case .inputUnavailable:
+            return "カメラインプットの初期化に失敗しました。"
         case .outputUnavailable:
             return "撮影出力の初期化に失敗しました。"
+        case .notAuthorized:
+            return "カメラの権限がありません。"
         case .notConfigured:
             return "カメラの準備が完了していません。"
         case .captureFailed(let error):

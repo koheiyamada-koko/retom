@@ -181,7 +181,7 @@ struct CameraView: View {
             
             Button("閉じる", role: .cancel) { }
         } message: {
-            Text("Pro版にアップグレードすると、撮影枚数が無制限になります")
+            Text("Pro版にアップグレードすると、保存枚数の上限がなくなります。")
         }
         #if !targetEnvironment(simulator)
         .onReceive(cameraService.$authorizationStatus) { newStatus in
@@ -240,7 +240,7 @@ struct CameraView: View {
                         .minimumScaleFactor(0.85)
                         .multilineTextAlignment(.center)
                 } else {
-                    Text("Pro版：無制限")
+                    Text("Pro版（保存枚数は無制限）")
                         .font(.caption)
                         .foregroundColor(Color(red: 0.4, green: 0.5, blue: 0.6))
                         .lineLimit(1)
@@ -539,18 +539,11 @@ struct CameraView: View {
     }
 
     private func showCameraPermissionAlert(for status: AVAuthorizationStatus) {
-        let reason: String
-        switch status {
-        case .denied:
-            reason = "ユーザーにより拒否されました。"
-        case .restricted:
-            reason = "機能制限によりアクセスできません。"
-        default:
-            reason = "カメラへのアクセス権限がありません。"
-        }
-        alertMessage = "カメラにアクセスできないため撮影できません。\\n" + reason
+        let message = "カメラへのアクセスが許可されていません。設定から変更してください。"
+        alertMessage = message
         showSettingsButton = true
     }
+
 
     private var shutterLabel: String {
         #if targetEnvironment(simulator)
@@ -560,17 +553,6 @@ struct CameraView: View {
         #endif
     }
 
-    private var currentPermissionLabel: String {
-        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
-        switch status {
-        case .authorized: return "authorized"
-        case .limited: return "limited"
-        case .denied: return "denied"
-        case .restricted: return "restricted"
-        case .notDetermined: return "notDetermined"
-        @unknown default: return "unknown"
-        }
-    }
 
     @MainActor
     private func requestPhotoAccessAndPresentPicker() async {
@@ -605,24 +587,14 @@ struct CameraView: View {
     }
 
     private func showPermissionAlert(for status: PHAuthorizationStatus) {
-        let baseMessage = "保存に失敗しました。写真へのアクセス権限を確認してください。"
-        let reason: String
-
-        switch status {
-        case .denied:
-            reason = "ユーザーにより拒否されました。"
-        case .restricted:
-            reason = "機能制限によりアクセスできません。"
-        default:
-            reason = "権限がありません。"
-        }
-
-        alertMessage = baseMessage + "\\n" + reason
+        let message = "写真へのアクセスが許可されていません。設定から変更してください。"
+        alertMessage = message
         showSettingsButton = true
         #if DEBUG
-        print("❌ Photos permission issue: \\(status.rawValue) \\(reason)")
+        print("❌ Photos permission issue: \(status.rawValue)")
         #endif
     }
+
 
     private func openSettingsIfNeeded() {
         guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
@@ -684,7 +656,7 @@ struct CameraView: View {
             print("⚠️ 保存が重複しないようスキップ")
             #endif
         case .jpegConversionFailed, .fileWriteFailed:
-            alertMessage = "保存に失敗しました。写真へのアクセス権限を確認してください。"
+            alertMessage = "保存に失敗しました。もう一度お試しください。"
             showSettingsButton = false
             #if DEBUG
             print("❌ 保存エラー: \\(error.localizedDescription)")

@@ -385,9 +385,9 @@
 				DEVELOPMENT_TEAM = Y55ZX73Z84;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSCameraUsageDescription = "レトロカメラで撮影するためにカメラを使用します";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "撮影した写真を写真ライブラリに保存するために使用します。";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "撮影した写真を保存・表示するために写真ライブラリへアクセスします。";
+				INFOPLIST_KEY_NSCameraUsageDescription = "撮影のためにカメラを使用します。";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "撮影した写真をフォトライブラリに保存します。";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "写真を保存・表示するためにフォトライブラリへアクセスします。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -419,9 +419,9 @@
 				DEVELOPMENT_TEAM = Y55ZX73Z84;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSCameraUsageDescription = "レトロカメラで撮影するためにカメラを使用します";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "撮影した写真を写真ライブラリに保存するために使用します。";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "撮影した写真を保存・表示するために写真ライブラリへアクセスします。";
+				INFOPLIST_KEY_NSCameraUsageDescription = "撮影のためにカメラを使用します。";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "撮影した写真をフォトライブラリに保存します。";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "写真を保存・表示するためにフォトライブラリへアクセスします。";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

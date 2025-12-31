@@ -153,17 +153,17 @@ enum PurchaseError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .productNotFound:
-            return "プロダクトが見つかりませんでした"
-        case .verificationFailed(let error):
-            return "購入の検証に失敗しました: \(error.localizedDescription)"
+            return "購入項目を取得できませんでした。時間をおいて再度お試しください。"
+        case .verificationFailed:
+            return "購入を確認できませんでした。時間をおいて再度お試しください。"
         case .userCancelled:
-            return "購入がキャンセルされました"
+            return "購入をキャンセルしました。"
         case .pending:
-            return "購入が保留中です"
+            return "購入が保留中です。しばらくお待ちください。"
         case .noRestorablePurchases:
-            return "復元できる購入が見つかりませんでした"
+            return "復元できる購入が見つかりませんでした。"
         case .unknown:
-            return "不明なエラーが発生しました"
+            return "処理を完了できませんでした。時間をおいて再度お試しください。"
         }
     }
 }

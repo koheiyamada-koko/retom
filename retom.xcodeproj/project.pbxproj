@@ -8,15 +8,46 @@
 
 /* Begin PBXFileReference section */
 		653196BD2EC8662400C39171 /* Retom.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Retom.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		653196D12EC8670000C39171 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		653196D22EC8670000C39171 /* retomApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = retomApp.swift; sourceTree = "<group>"; };
+		653196D32EC8670000C39171 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		653196D52EC8670000C39171 /* PhotoItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoItem.swift; sourceTree = "<group>"; };
+		653196D62EC8670000C39171 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		653196D82EC8670000C39171 /* CameraService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraService.swift; sourceTree = "<group>"; };
+		653196D92EC8670000C39171 /* PurchaseManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PurchaseManager.swift; sourceTree = "<group>"; };
+		653196DB2EC8670000C39171 /* RetroFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetroFilter.swift; sourceTree = "<group>"; };
+		653196DC2EC8670000C39171 /* CameraPreviewService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewService.swift; sourceTree = "<group>"; };
+		653196DD2EC8670000C39171 /* CameraPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPicker.swift; sourceTree = "<group>"; };
+		653196DE2EC8670000C39171 /* UserDefaultsKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsKeys.swift; sourceTree = "<group>"; };
+		653196E02EC8670000C39171 /* CameraViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraViewModel.swift; sourceTree = "<group>"; };
+		653196E22EC8670000C39171 /* CameraPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewView.swift; sourceTree = "<group>"; };
+		653196E32EC8670000C39171 /* AlbumView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumView.swift; sourceTree = "<group>"; };
+		653196E42EC8670000C39171 /* CameraView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraView.swift; sourceTree = "<group>"; };
+		653196E52EC8670000C39171 /* UpgradeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpgradeView.swift; sourceTree = "<group>"; };
+		653196E62EC8670000C39171 /* PhotoDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoDetailView.swift; sourceTree = "<group>"; };
+		653196E82EC8670000C39171 /* CameraPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreview.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		653196BF2EC8662400C39171 /* retom */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = retom;
-			sourceTree = "<group>";
-		};
-/* End PBXFileSystemSynchronizedRootGroup section */
+/* Begin PBXBuildFile section */
+		653196F02EC8671A00C39171 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653196D12EC8670000C39171 /* ContentView.swift */; };
+		653196F12EC8671A00C39171 /* retomApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653196D22EC8670000C39171 /* retomApp.swift */; };
+		653196F22EC8671A00C39171 /* PhotoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653196D52EC8670000C39171 /* PhotoItem.swift */; };
+		653196F32EC8671A00C39171 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653196D62EC8670000C39171 /* AppState.swift */; };
+		653196F42EC8671A00C39171 /* CameraService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653196D82EC8670000C39171 /* CameraService.swift */; };
+		653196F52EC8671A00C39171 /* PurchaseManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653196D92EC8670000C39171 /* PurchaseManager.swift */; };
+		653196F62EC8671A00C39171 /* RetroFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653196DB2EC8670000C39171 /* RetroFilter.swift */; };
+		653196F72EC8671A00C39171 /* CameraPreviewService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653196DC2EC8670000C39171 /* CameraPreviewService.swift */; };
+		653196F82EC8671A00C39171 /* CameraPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653196DD2EC8670000C39171 /* CameraPicker.swift */; };
+		653196F92EC8671A00C39171 /* UserDefaultsKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653196DE2EC8670000C39171 /* UserDefaultsKeys.swift */; };
+		653196FA2EC8671A00C39171 /* CameraViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653196E02EC8670000C39171 /* CameraViewModel.swift */; };
+		653196FB2EC8671A00C39171 /* CameraPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653196E22EC8670000C39171 /* CameraPreviewView.swift */; };
+		653196FC2EC8671A00C39171 /* AlbumView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653196E32EC8670000C39171 /* AlbumView.swift */; };
+		653196FD2EC8671A00C39171 /* CameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653196E42EC8670000C39171 /* CameraView.swift */; };
+		653196FE2EC8671A00C39171 /* UpgradeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653196E52EC8670000C39171 /* UpgradeView.swift */; };
+		653196FF2EC8671A00C39171 /* PhotoDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653196E62EC8670000C39171 /* PhotoDetailView.swift */; };
+		653197002EC8671A00C39171 /* CameraPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 653196E82EC8670000C39171 /* CameraPreview.swift */; };
+		653197012EC8671A00C39171 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 653196D32EC8670000C39171 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		653196BA2EC8662400C39171 /* Frameworks */ = {
@@ -37,12 +68,93 @@
 			);
 			sourceTree = "<group>";
 		};
+		653196BF2EC8662400C39171 /* retom */ = {
+			isa = PBXGroup;
+			children = (
+				653196D32EC8670000C39171 /* Assets.xcassets */,
+				653196D12EC8670000C39171 /* ContentView.swift */,
+				653196D22EC8670000C39171 /* retomApp.swift */,
+				653196D02EC8670000C39171 /* Shared */,
+			);
+			path = retom;
+			sourceTree = "<group>";
+		};
 		653196BE2EC8662400C39171 /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				653196BD2EC8662400C39171 /* Retom.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		653196D02EC8670000C39171 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				653196D42EC8670000C39171 /* Models */,
+				653196D72EC8670000C39171 /* Services */,
+				653196DA2EC8670000C39171 /* Utils */,
+				653196DF2EC8670000C39171 /* ViewModels */,
+				653196E12EC8670000C39171 /* Views */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		653196D42EC8670000C39171 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				653196D62EC8670000C39171 /* AppState.swift */,
+				653196D52EC8670000C39171 /* PhotoItem.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		653196D72EC8670000C39171 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				653196D82EC8670000C39171 /* CameraService.swift */,
+				653196D92EC8670000C39171 /* PurchaseManager.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		653196DA2EC8670000C39171 /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				653196DD2EC8670000C39171 /* CameraPicker.swift */,
+				653196DC2EC8670000C39171 /* CameraPreviewService.swift */,
+				653196DB2EC8670000C39171 /* RetroFilter.swift */,
+				653196DE2EC8670000C39171 /* UserDefaultsKeys.swift */,
+			);
+			path = Utils;
+			sourceTree = "<group>";
+		};
+		653196DF2EC8670000C39171 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				653196E02EC8670000C39171 /* CameraViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		653196E12EC8670000C39171 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				653196E32EC8670000C39171 /* AlbumView.swift */,
+				653196E72EC8670000C39171 /* Camera */,
+				653196E42EC8670000C39171 /* CameraView.swift */,
+				653196E22EC8670000C39171 /* CameraPreviewView.swift */,
+				653196E62EC8670000C39171 /* PhotoDetailView.swift */,
+				653196E52EC8670000C39171 /* UpgradeView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		653196E72EC8670000C39171 /* Camera */ = {
+			isa = PBXGroup;
+			children = (
+				653196E82EC8670000C39171 /* CameraPreview.swift */,
+			);
+			path = Camera;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -59,9 +171,6 @@
 			buildRules = (
 			);
 			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				653196BF2EC8662400C39171 /* retom */,
 			);
 			name = retom;
 			packageProductDependencies = (
@@ -110,6 +219,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				653197012EC8671A00C39171 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -120,6 +230,23 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				653196F32EC8671A00C39171 /* AppState.swift in Sources */,
+				653196F22EC8671A00C39171 /* PhotoItem.swift in Sources */,
+				653196FD2EC8671A00C39171 /* CameraView.swift in Sources */,
+				653196FB2EC8671A00C39171 /* CameraPreviewView.swift in Sources */,
+				653196F92EC8671A00C39171 /* UserDefaultsKeys.swift in Sources */,
+				653196F82EC8671A00C39171 /* CameraPicker.swift in Sources */,
+				653196FF2EC8671A00C39171 /* PhotoDetailView.swift in Sources */,
+				653197002EC8671A00C39171 /* CameraPreview.swift in Sources */,
+				653196F72EC8671A00C39171 /* CameraPreviewService.swift in Sources */,
+				653196FE2EC8671A00C39171 /* UpgradeView.swift in Sources */,
+				653196F62EC8671A00C39171 /* RetroFilter.swift in Sources */,
+				653196FA2EC8671A00C39171 /* CameraViewModel.swift in Sources */,
+				653196F52EC8671A00C39171 /* PurchaseManager.swift in Sources */,
+				653196FC2EC8671A00C39171 /* AlbumView.swift in Sources */,
+				653196F02EC8671A00C39171 /* ContentView.swift in Sources */,
+				653196F12EC8671A00C39171 /* retomApp.swift in Sources */,
+				653196F42EC8671A00C39171 /* CameraService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
